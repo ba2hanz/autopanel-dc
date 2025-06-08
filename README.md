@@ -2,7 +2,7 @@
 
 AutoPanel, Discord sunucularınızı kolayca yönetebilmeniz için tasarlanmış gelişmiş bir otomasyon botudur. Sunucu sahipleri ve moderatörler için çekiliş, rol yönetimi, slowmode gibi pek çok özelliği bir araya getirir.
 
-## 🚀 Özellikler
+## 🚀 Özellikler(Yenilenecek ve geliştirilecek)
 
 - 🎉 **Çekiliş Sistemi**  
   - Süreli çekiliş başlatma  
