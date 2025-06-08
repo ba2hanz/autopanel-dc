@@ -71,7 +71,7 @@ export default function Navigation() {
     <Box sx={{ overflow: 'auto' }}>
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
         <Avatar
-          src={user?.avatar}
+          src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
           alt={user?.username}
           sx={{ width: 40, height: 40, mr: 2 }}
         />
@@ -139,7 +139,7 @@ export default function Navigation() {
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
             <Avatar
                     alt={user?.username}
-              src={user?.avatar}
+              src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
             />
           </IconButton>
               </Tooltip>

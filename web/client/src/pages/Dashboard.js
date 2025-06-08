@@ -88,7 +88,7 @@ export default function Dashboard() {
               }}
             >
               <Avatar
-                src={user?.avatar}
+                src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
                 alt={user?.username}
                 sx={{ 
                   width: 64, 
