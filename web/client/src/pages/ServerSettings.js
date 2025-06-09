@@ -15,6 +15,8 @@ import ForumIcon from '@mui/icons-material/Forum';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import TagFacesIcon from '@mui/icons-material/TagFaces';
+import PollIcon from '@mui/icons-material/Poll';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -48,6 +50,20 @@ const settingsOptions = [
     path: 'autoresponse',
   },
   {
+    key: 'polls',
+    title: 'Anketler',
+    description: 'Sunucunuzda anketler oluşturun ve yönetin',
+    icon: <PollIcon fontSize="large" color="primary" />,
+    path: 'polls',
+  },
+  {
+    key: 'reactionrole',
+    title: 'Tepki Rolleri',
+    description: 'Mesajlara tepki vererek rol alınmasını sağlayın',
+    icon: <HowToVoteIcon fontSize="large" color="primary" />,
+    path: 'reactionrole',
+  },
+  {
     key: 'emojirole',
     title: 'Emoji Rol',
     description: 'Üyelerin mesajlara tepki vererek rol almasını sağlar',
@@ -70,7 +86,10 @@ export default function ServerSettings() {
   const [server, setServer] = useState(null);
   const [error, setError] = useState(null);
 
+  console.log('ServerSettings render');
+
   useEffect(() => {
+    console.log('ServerSettings useEffect');
     const fetchServer = async () => {
       try {
         const response = await fetch(`${API_URL}/api/servers/${guildId}`, {
@@ -122,7 +141,7 @@ export default function ServerSettings() {
         {settingsOptions.map((option) => (
           <Grid item xs={12} sm={6} md={4} key={option.key}>
             <Card sx={{ height: '100%' }} elevation={3}>
-              <CardActionArea onClick={() => navigate(`/server/${guildId}/settings/${option.path}`)} sx={{ height: '100%' }}>
+              <CardActionArea onClick={() => navigate(`/dashboard/server/${guildId}/settings/${option.path}`)} sx={{ height: '100%' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     {option.icon}

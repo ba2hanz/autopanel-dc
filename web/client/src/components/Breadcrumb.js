@@ -52,7 +52,7 @@ export default function Breadcrumb({ currentPage, compact, sx }) {
 
   // If user is in a server context, add Sunucularım
   if (pathnames.includes('server')) {
-    items.push({ label: 'Sunucularım', to: '/' });
+    items.push({ label: 'Sunucularım', to: '/dashboard' });
   }
 
   // If in a specific server, add server name + icon
@@ -68,13 +68,13 @@ export default function Breadcrumb({ currentPage, compact, sx }) {
           <span>{server.name}</span>
         </Box>
       ),
-      to: `/server/${server.guildId}/settings`,
+      to: `/dashboard/server/${server.guildId}/settings`,
     });
   }
 
   // If in settings or sub-settings
   if (pathnames.includes('settings')) {
-    items.push({ label: 'Ayarlar', to: `/server/${params.guildId}/settings` });
+    items.push({ label: 'Ayarlar', to: `/dashboard/server/${params.guildId}/settings` });
   }
 
   // Sub-settings (welcome, moderation, etc.)

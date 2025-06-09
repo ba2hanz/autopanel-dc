@@ -323,6 +323,28 @@ wss.on('connection', (ws) => {
     });
 });
 
+// Polls için geçici bellek içi veri
+const pollsStore = {};
+
+// Sunucuya ait anketleri getir
+apiApp.get('/api/servers/:guildId/polls', (req, res) => {
+  const { guildId } = req.params;
+  if (!guildId) return res.status(400).json({ message: 'guildId gerekli' });
+  if (!pollsStore[guildId]) pollsStore[guildId] = [];
+  res.json(pollsStore[guildId]);
+});
+
+// Sunucuya yeni anket ekle
+apiApp.post('/api/servers/:guildId/polls', (req, res) => {
+  const { guildId } = req.params;
+  const poll = req.body;
+  if (!guildId || !poll) return res.status(400).json({ message: 'Eksik veri' });
+  if (!pollsStore[guildId]) pollsStore[guildId] = [];
+  poll.id = Date.now().toString();
+  pollsStore[guildId].push(poll);
+  res.json(poll);
+});
+
 // Bot'u başlatmadan önce MongoDB bağlantısını bekle
 async function startBot() {
     try {
@@ -368,6 +390,32 @@ mongoose.connection.on('disconnected', () => {
     console.log('[MongoDB] Bağlantı kesildi');
     // Bağlantı kesildiğinde yeniden bağlanmayı dene
     connectWithRetry();
+});
+
+client.on('messageReactionAdd', async (reaction, user) => {
+  if (user.bot) return;
+  // Partial reaction veya message ise fetch et
+  if (reaction.partial) try { await reaction.fetch(); } catch { return; }
+  if (reaction.message.partial) try { await reaction.message.fetch(); } catch { return; }
+  const key = `${reaction.message.id}-${reaction.emoji.name}`;
+  const roleId = client.reactionRoles?.get(key);
+  if (roleId) {
+    const member = await reaction.message.guild.members.fetch(user.id);
+    await member.roles.add(roleId).catch(() => {});
+  }
+});
+
+client.on('messageReactionRemove', async (reaction, user) => {
+  if (user.bot) return;
+  // Partial reaction veya message ise fetch et
+  if (reaction.partial) try { await reaction.fetch(); } catch { return; }
+  if (reaction.message.partial) try { await reaction.message.fetch(); } catch { return; }
+  const key = `${reaction.message.id}-${reaction.emoji.name}`;
+  const roleId = client.reactionRoles?.get(key);
+  if (roleId) {
+    const member = await reaction.message.guild.members.fetch(user.id);
+    await member.roles.remove(roleId).catch(() => {});
+  }
 });
 
 // Bot'u başlat

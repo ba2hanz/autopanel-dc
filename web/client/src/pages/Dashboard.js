@@ -44,7 +44,10 @@ export default function Dashboard() {
     enableAutoRole: false
   });
 
+  console.log('Dashboard render');
+
   useEffect(() => {
+    console.log('Dashboard useEffect');
     const fetchServers = async () => {
       try {
         const response = await fetch(`${API_URL}/api/servers`, {
@@ -121,7 +124,7 @@ export default function Dashboard() {
       autoRole: '',
       enableAutoRole: false
     });
-    navigate(`/server/${server.guildId}/settings`);
+    navigate(`/dashboard/server/${server.guildId}/settings`);
   };
 
   if (loading) {
@@ -145,7 +148,6 @@ export default function Dashboard() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#18181c', py: 4 }}>
       <Container maxWidth="lg">
-        <Breadcrumb />
         <Grid container spacing={3}>
           {/* Hoşgeldin Kartı */}
           <Grid item xs={12}>

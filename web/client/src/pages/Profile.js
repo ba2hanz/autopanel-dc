@@ -126,180 +126,182 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#18181c' }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
-        {/* Profil Kartı */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
-            <Avatar
-              src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
-              alt={user?.username}
-              sx={{ width: 120, height: 120, mx: 'auto', mb: 2 }}
-            />
-            <Typography variant="h5" gutterBottom>
-              {user?.username}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" gutterBottom>
-              {user?.email}
-            </Typography>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<LogoutIcon />}
-              onClick={handleLogout}
-              sx={{ mt: 2 }}
-            >
-              Çıkış Yap
-            </Button>
-          </Paper>
-        </Grid>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#18181c', py: 4 }}>
+      <Container maxWidth="lg">
+        <Grid container spacing={3}>
+          {/* Profil Kartı */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <Avatar
+                src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
+                alt={user?.username}
+                sx={{ width: 120, height: 120, mx: 'auto', mb: 2 }}
+              />
+              <Typography variant="h5" gutterBottom>
+                {user?.username}
+              </Typography>
+              <Typography variant="body1" color="text.secondary" gutterBottom>
+                {user?.email}
+              </Typography>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<LogoutIcon />}
+                onClick={handleLogout}
+                sx={{ mt: 2 }}
+              >
+                Çıkış Yap
+              </Button>
+            </Paper>
+          </Grid>
 
-        {/* Ayarlar */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Hesap Ayarları
-            </Typography>
+          {/* Ayarlar */}
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Hesap Ayarları
+              </Typography>
 
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
 
-            <List>
-              <ListItem>
-                <ListItemIcon>
-                  <NotificationsIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Bildirimler"
-                  secondary="E-posta ve Discord bildirimlerini yönetin"
-                />
-                <Box>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.notifications.email}
-                        onChange={(e) => handleSettingChange('notifications', {
-                          ...settings.notifications,
-                          email: e.target.checked
-                        })}
-                      />
-                    }
-                    label="E-posta"
+              <List>
+                <ListItem>
+                  <ListItemIcon>
+                    <NotificationsIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Bildirimler"
+                    secondary="E-posta ve Discord bildirimlerini yönetin"
+                  />
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={settings.notifications.email}
+                          onChange={(e) => handleSettingChange('notifications', {
+                            ...settings.notifications,
+                            email: e.target.checked
+                          })}
+                        />
+                      }
+                      label="E-posta"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={settings.notifications.discord}
+                          onChange={(e) => handleSettingChange('notifications', {
+                            ...settings.notifications,
+                            discord: e.target.checked
+                          })}
+                        />
+                      }
+                      label="Discord"
+                    />
+                  </Box>
+                </ListItem>
+
+                <Divider />
+
+                <ListItem>
+                  <ListItemIcon>
+                    <DarkModeIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Karanlık Mod"
+                    secondary="Arayüz temasını değiştirin"
                   />
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={settings.notifications.discord}
-                        onChange={(e) => handleSettingChange('notifications', {
-                          ...settings.notifications,
-                          discord: e.target.checked
-                        })}
+                        checked={settings.darkMode}
+                        onChange={(e) => handleSettingChange('darkMode', e.target.checked)}
                       />
                     }
-                    label="Discord"
+                    label=""
                   />
-                </Box>
-              </ListItem>
+                </ListItem>
 
-              <Divider />
+                <Divider />
 
-              <ListItem>
-                <ListItemIcon>
-                  <DarkModeIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Karanlık Mod"
-                  secondary="Arayüz temasını değiştirin"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.darkMode}
-                      onChange={(e) => handleSettingChange('darkMode', e.target.checked)}
-                    />
-                  }
-                  label=""
-                />
-              </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <SecurityIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="İki Faktörlü Doğrulama"
+                    secondary="Hesap güvenliğinizi artırın"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.twoFactor}
+                        onChange={(e) => handleSettingChange('twoFactor', e.target.checked)}
+                      />
+                    }
+                    label=""
+                  />
+                </ListItem>
 
-              <Divider />
+                <Divider />
 
-              <ListItem>
-                <ListItemIcon>
-                  <SecurityIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="İki Faktörlü Doğrulama"
-                  secondary="Hesap güvenliğinizi artırın"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.twoFactor}
-                      onChange={(e) => handleSettingChange('twoFactor', e.target.checked)}
-                    />
-                  }
-                  label=""
-                />
-              </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <LanguageIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Dil"
+                    secondary="Arayüz dilini değiştirin"
+                  />
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleSettingChange('language', settings.language === 'tr' ? 'en' : 'tr')}
+                  >
+                    {settings.language === 'tr' ? 'English' : 'Türkçe'}
+                  </Button>
+                </ListItem>
+              </List>
+            </Paper>
 
-              <Divider />
-
-              <ListItem>
-                <ListItemIcon>
-                  <LanguageIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Dil"
-                  secondary="Arayüz dilini değiştirin"
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleSettingChange('language', settings.language === 'tr' ? 'en' : 'tr')}
-                >
-                  {settings.language === 'tr' ? 'English' : 'Türkçe'}
-                </Button>
-              </ListItem>
-            </List>
-          </Paper>
-
-          {/* Hesap İstatistikleri */}
-          <Paper sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Hesap İstatistikleri
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Sunucu Sayısı
-                </Typography>
-                <Typography variant="h4">
-                  {user?.servers?.length || 0}
-                </Typography>
+            {/* Hesap İstatistikleri */}
+            <Paper sx={{ p: 3, mt: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Hesap İstatistikleri
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Sunucu Sayısı
+                  </Typography>
+                  <Typography variant="h4">
+                    {user?.servers?.length || 0}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Son Giriş
+                  </Typography>
+                  <Typography variant="h4">
+                    {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
+                  </Typography>
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Son Giriş
-                </Typography>
-                <Typography variant="h4">
-                  {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Paper>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
-    </Container>
+      </Container>
+    </Box>
   );
 } 

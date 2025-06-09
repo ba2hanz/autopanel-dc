@@ -3,6 +3,8 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Server = require('../models/Server');
 const User = require('../models/User');
+const Poll = require('../models/Poll');
+const ReactionRole = require('../models/ReactionRole');
 const axios = require('axios');
 require('dotenv').config();
 
@@ -604,6 +606,240 @@ router.get('/debug/:guildId', async (req, res) => {
             error: error.response?.data || error.message,
             status: error.response?.status
         });
+    }
+});
+
+// Get server channels
+router.get('/:guildId/channels', auth, async (req, res) => {
+    try {
+        const botToken = process.env.DISCORD_BOT_TOKEN;
+        const guildId = req.params.guildId;
+
+        const response = await axios.get(`${DISCORD_API_URL}/guilds/${guildId}/channels`, {
+            headers: {
+                'Authorization': `Bot ${botToken}`
+            }
+        });
+
+        // Sadece text kanallarını filtrele
+        const textChannels = response.data.filter(channel => channel.type === 0);
+        
+        res.json(textChannels);
+    } catch (error) {
+        console.error('Channels API Hatası:', error.response?.data || error.message);
+        res.status(500).json({ error: error.response?.data || error.message });
+    }
+});
+
+// Get server roles
+router.get('/:guildId/roles', auth, async (req, res) => {
+    try {
+        const botToken = process.env.DISCORD_BOT_TOKEN;
+        const guildId = req.params.guildId;
+
+        const response = await axios.get(`${DISCORD_API_URL}/guilds/${guildId}/roles`, {
+            headers: {
+                'Authorization': `Bot ${botToken}`
+            }
+        });
+
+        // @everyone rolünü filtrele ve botun rolünden daha yüksek rolleri filtrele
+        const botResponse = await axios.get(`${DISCORD_API_URL}/guilds/${guildId}/members/${process.env.CLIENT_ID}`, {
+            headers: {
+                'Authorization': `Bot ${botToken}`
+            }
+        });
+
+        const botHighestRole = Math.max(...botResponse.data.roles.map(roleId => {
+            const role = response.data.find(r => r.id === roleId);
+            return role ? role.position : 0;
+        }));
+
+        const filteredRoles = response.data.filter(role => 
+            role.id !== guildId && // @everyone rolünü filtrele
+            role.position < botHighestRole // Botun rolünden daha yüksek rolleri filtrele
+        );
+
+        res.json(filteredRoles);
+    } catch (error) {
+        console.error('Roles API Hatası:', error.response?.data || error.message);
+        res.status(500).json({ error: error.response?.data || error.message });
+    }
+});
+
+// Polls endpoints
+router.get('/:guildId/polls', auth, async (req, res) => {
+    try {
+        const polls = await Poll.find({ guildId: req.params.guildId, active: true });
+        res.json(polls);
+    } catch (error) {
+        console.error('Polls API Hatası:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/:guildId/polls', auth, async (req, res) => {
+    try {
+        const { channelId, question, options, duration } = req.body;
+        const guildId = req.params.guildId;
+        const botToken = process.env.DISCORD_BOT_TOKEN;
+
+        // Discord'a mesaj gönder
+        const messageResponse = await axios.post(
+            `${DISCORD_API_URL}/channels/${channelId}/messages`,
+            {
+                content: `**${question}**\n\n${options.map((opt, i) => `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'][i]} ${opt}`).join('\n')}`
+            },
+            {
+                headers: {
+                    'Authorization': `Bot ${botToken}`
+                }
+            }
+        );
+
+        // Her seçenek için tepki ekle
+        for (let i = 0; i < options.length; i++) {
+            await axios.put(
+                `${DISCORD_API_URL}/channels/${channelId}/messages/${messageResponse.data.id}/reactions/${encodeURIComponent(['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'][i])}/@me`,
+                {},
+                {
+                    headers: {
+                        'Authorization': `Bot ${botToken}`
+                    }
+                }
+            );
+        }
+
+        // Veritabanına kaydet
+        const poll = new Poll({
+            guildId,
+            channelId,
+            messageId: messageResponse.data.id,
+            question,
+            options,
+            duration,
+            endsAt: new Date(Date.now() + duration * 60 * 60 * 1000)
+        });
+
+        await poll.save();
+        res.json(poll);
+    } catch (error) {
+        console.error('Poll Oluşturma Hatası:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/:guildId/polls/:pollId', auth, async (req, res) => {
+    try {
+        const poll = await Poll.findOne({ _id: req.params.pollId, guildId: req.params.guildId });
+        if (!poll) {
+            return res.status(404).json({ error: 'Anket bulunamadı' });
+        }
+
+        // Discord'dan mesajı sil
+        const botToken = process.env.DISCORD_BOT_TOKEN;
+        await axios.delete(
+            `${DISCORD_API_URL}/channels/${poll.channelId}/messages/${poll.messageId}`,
+            {
+                headers: {
+                    'Authorization': `Bot ${botToken}`
+                }
+            }
+        );
+
+        // Veritabanından sil
+        await poll.deleteOne();
+        res.json({ message: 'Anket başarıyla silindi' });
+    } catch (error) {
+        console.error('Poll Silme Hatası:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Reaction Roles endpoints
+router.get('/:guildId/reactionroles', auth, async (req, res) => {
+    try {
+        const reactionRoles = await ReactionRole.find({ guildId: req.params.guildId, active: true });
+        res.json(reactionRoles);
+    } catch (error) {
+        console.error('ReactionRoles API Hatası:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/:guildId/reactionroles', auth, async (req, res) => {
+    try {
+        const { channelId, message, reactions } = req.body;
+        const guildId = req.params.guildId;
+        const botToken = process.env.DISCORD_BOT_TOKEN;
+
+        // Discord'a mesaj gönder
+        const messageResponse = await axios.post(
+            `${DISCORD_API_URL}/channels/${channelId}/messages`,
+            {
+                content: message
+            },
+            {
+                headers: {
+                    'Authorization': `Bot ${botToken}`
+                }
+            }
+        );
+
+        // Her tepki için rol ekle
+        for (const reaction of reactions) {
+            await axios.put(
+                `${DISCORD_API_URL}/channels/${channelId}/messages/${messageResponse.data.id}/reactions/${encodeURIComponent(reaction.emoji)}/@me`,
+                {},
+                {
+                    headers: {
+                        'Authorization': `Bot ${botToken}`
+                    }
+                }
+            );
+        }
+
+        // Veritabanına kaydet
+        const reactionRole = new ReactionRole({
+            guildId,
+            channelId,
+            messageId: messageResponse.data.id,
+            message,
+            reactions
+        });
+
+        await reactionRole.save();
+        res.json(reactionRole);
+    } catch (error) {
+        console.error('ReactionRole Oluşturma Hatası:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/:guildId/reactionroles/:reactionRoleId', auth, async (req, res) => {
+    try {
+        const reactionRole = await ReactionRole.findOne({ _id: req.params.reactionRoleId, guildId: req.params.guildId });
+        if (!reactionRole) {
+            return res.status(404).json({ error: 'Tepki rolü bulunamadı' });
+        }
+
+        // Discord'dan mesajı sil
+        const botToken = process.env.DISCORD_BOT_TOKEN;
+        await axios.delete(
+            `${DISCORD_API_URL}/channels/${reactionRole.channelId}/messages/${reactionRole.messageId}`,
+            {
+                headers: {
+                    'Authorization': `Bot ${botToken}`
+                }
+            }
+        );
+
+        // Veritabanından sil
+        await reactionRole.deleteOne();
+        res.json({ message: 'Tepki rolü başarıyla silindi' });
+    } catch (error) {
+        console.error('ReactionRole Silme Hatası:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

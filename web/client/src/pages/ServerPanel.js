@@ -76,7 +76,10 @@ function ServerPanel() {
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
 
+  console.log('ServerPanel render');
+
   useEffect(() => {
+    console.log('ServerPanel useEffect');
     const fetchServer = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -99,11 +102,11 @@ function ServerPanel() {
   };
 
   const handleUpgradeClick = () => {
-    navigate(`/server/${guildId}/upgrade`);
+    navigate(`/dashboard/server/${guildId}/upgrade`);
   };
 
   const handleSettingsClick = () => {
-    navigate(`/server/${guildId}/settings`);
+    navigate(`/dashboard/server/${guildId}/settings`);
   };
 
   if (loading) {

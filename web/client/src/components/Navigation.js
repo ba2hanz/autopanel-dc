@@ -30,6 +30,7 @@ import {
   Apps as LogoIcon
 } from '@mui/icons-material';
 import Breadcrumb from './Breadcrumb';
+import autopanelLogo from '../assets/autopanel-logo.png';
 
 const drawerWidth = 240;
 
@@ -65,28 +66,24 @@ export default function Navigation() {
   };
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Profil', icon: <PersonIcon />, path: '/profile' }
   ];
 
   const drawer = (
     <Box sx={{ overflow: 'auto' }}>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-        <Avatar
-          src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
-          alt={user?.username}
-          sx={{ width: 40, height: 40, mr: 2 }}
-        />
-        <Box>
-          <Typography variant="subtitle1" noWrap>
-            {user?.username}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" noWrap>
-            {user?.email}
+      <Box sx={{ p: 0, height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+        <img src={autopanelLogo} alt="AutoPanel Logo" style={{ width: 48, height: 48, marginRight: 0, borderRadius: 8 }} />
+        <Typography
+          variant="h5"
+          noWrap
+          component="div"
+          sx={{ fontWeight: 800, letterSpacing: '-1px', color: '#fff', fontSize: '1.35rem' }}
+        >
+          AutoPanel
         </Typography>
-        </Box>
       </Box>
-      <Divider />
+      <Divider sx={{ mx: 0, my: 0, width: '100%', borderColor: '#23232b' }} />
       <List>
         {menuItems.map((item) => (
           <ListItem
@@ -119,79 +116,9 @@ export default function Navigation() {
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar disableGutters sx={{ minHeight: 64 }}>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2, display: { sm: 'none' } }}
-            >
-              <MenuIcon />
-            </IconButton>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-              <LogoIcon sx={{ fontSize: 36, color: '#fff', mr: 1 }} />
-              <Typography
-                variant="h5"
-                noWrap
-                component="div"
-                sx={{ fontWeight: 800, letterSpacing: '-1px', color: '#fff', mr: 2 }}
-              >
-                AutoPanel
-              </Typography>
-              <Box sx={{ width: 2, height: 32, bgcolor: 'rgba(255,255,255,0.18)', borderRadius: 1, mx: 2 }} />
-            </Box>
-
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Breadcrumb compact sx={{ color: '#fff' }} />
-            </Box>
-
-            <Box sx={{ flexGrow: 0 }}>
-              <Tooltip title="Hesap ayarları">
-                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                  <Avatar
-                    alt={user?.username}
-                    src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
-                    sx={{ border: '2px solid #fff', boxShadow: '0 2px 8px rgba(99,102,241,0.18)' }}
-                  />
-                </IconButton>
-              </Tooltip>
-              <Menu
-                sx={{ mt: '45px' }}
-                id="menu-appbar"
-                anchorEl={anchorElUser}
-                anchorOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                open={Boolean(anchorElUser)}
-                onClose={handleCloseUserMenu}
-              >
-                <MenuItem onClick={() => {
-                  navigate('/profile');
-                  handleCloseUserMenu();
-                }}>
-                  <ListItemIcon>
-                    <PersonIcon fontSize="small" />
-                  </ListItemIcon>
-                  <Typography textAlign="center">Profil</Typography>
-                </MenuItem>
-                <MenuItem onClick={() => {
-                  handleLogout();
-                  handleCloseUserMenu();
-                }}>
-                  <ListItemIcon>
-                    <LogoutIcon fontSize="small" />
-                  </ListItemIcon>
-                  <Typography textAlign="center">Çıkış Yap</Typography>
-                </MenuItem>
-              </Menu>
+          <Toolbar disableGutters sx={{ minHeight: 88, pl: 0, pr: 0 }}>
+            <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
+              <Breadcrumb compact sx={{ color: '#fff', pl: 0, fontSize: '1.25rem' }} />
             </Box>
           </Toolbar>
         </Container>

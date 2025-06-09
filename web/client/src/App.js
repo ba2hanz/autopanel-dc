@@ -13,9 +13,12 @@ import ServerSettings from './pages/ServerSettings';
 import WelcomeSettings from './pages/WelcomeSettings';
 import LogSettings from './pages/LogSettings';
 import ModerationSettings from './pages/ModerationSettings';
+import Polls from './pages/settings/Polls';
+import ReactionRole from './pages/settings/ReactionRole';
 import Upgrade from './pages/Upgrade';
 import LandingPage from './pages/LandingPage';
 import AuthCallback from './pages/AuthCallback';
+import Profile from './pages/Profile';
 import { Toaster } from 'react-hot-toast';
 
 // Discord benzeri koyu tema
@@ -74,9 +77,18 @@ function App() {
           <Router>
             <Toaster position="top-right" />
             <Routes>
-              <Route path="/login" element={<Login />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/" element={<LandingPage />} />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Profile />} />
+              </Route>
               <Route
                 path="/dashboard"
                 element={
@@ -91,6 +103,8 @@ function App() {
                 <Route path="server/:guildId/settings/logs" element={<LogSettings />} />
                 <Route path="server/:guildId/settings/welcome" element={<WelcomeSettings />} />
                 <Route path="server/:guildId/settings/moderation" element={<ModerationSettings />} />
+                <Route path="server/:guildId/settings/polls" element={<Polls />} />
+                <Route path="server/:guildId/settings/reactionrole" element={<ReactionRole />} />
                 <Route path="server/:guildId/upgrade" element={<Upgrade />} />
               </Route>
               <Route path="*" element={<Navigate to="/" />} />
