@@ -4,7 +4,6 @@ import {
   Box,
   Container,
   Grid,
-  Paper,
   Typography,
   Card,
   CardContent,
@@ -16,9 +15,21 @@ import {
   ListItemText,
   Divider,
   CircularProgress,
-  CardActions
+  CardActions,
+  Stack,
+  Alert,
+  Paper
 } from '@mui/material';
-import { Settings as SettingsIcon } from '@mui/icons-material';
+import {
+  People as PeopleIcon,
+  Chat as ChatIcon,
+  EmojiEvents as EmojiEventsIcon,
+  Security as SecurityIcon,
+  Settings as SettingsIcon,
+  Dashboard as DashboardIcon,
+  Star as StarIcon,
+  Shield as ShieldIcon
+} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { toast } from 'react-hot-toast';
@@ -43,6 +54,13 @@ export default function Dashboard() {
     autoRole: '',
     enableAutoRole: false
   });
+  const [stats, setStats] = useState({
+    totalServers: 0,
+    adminServers: 0,
+    totalMembers: 0,
+    totalChannels: 0,
+    totalRoles: 0
+  });
 
   console.log('Dashboard render');
 
@@ -61,7 +79,47 @@ export default function Dashboard() {
           throw new Error(errorData.message || 'Sunucular yüklenemedi');
         }
         const data = await response.json();
+        console.log('Server Data:', data);
         setServers(data);
+
+        // Her sunucu için kanal ve rol sayılarını çek
+        const serversWithDetails = await Promise.all(data.map(async (server) => {
+          try {
+            const discordResponse = await fetch(`${API_URL}/api/servers/${server.guildId}/discord-data`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            if (!discordResponse.ok) throw new Error('Discord verileri yüklenemedi');
+            const discordData = await discordResponse.json();
+            return {
+              ...server,
+              channels: discordData.channels || [],
+              roles: discordData.roles || []
+            };
+          } catch (error) {
+            console.error(`Error fetching details for server ${server.guildId}:`, error);
+            return server;
+          }
+        }));
+
+        // İstatistikleri hesapla
+        const totalMembers = serversWithDetails.reduce((sum, server) => sum + (server.memberCount || 0), 0);
+        const totalChannels = serversWithDetails.reduce((sum, server) => sum + (server.channels?.length || 0), 0);
+        const totalRoles = serversWithDetails.reduce((sum, server) => sum + (server.roles?.length || 0), 0);
+        const adminServers = serversWithDetails.length;
+
+        console.log('Stats:', { totalMembers, totalChannels, totalRoles, adminServers });
+
+        setStats({
+          totalServers: adminServers,
+          adminServers,
+          totalMembers,
+          totalChannels,
+          totalRoles
+        });
+
+        setServers(serversWithDetails);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -146,188 +204,304 @@ export default function Dashboard() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#18181c', py: 4 }}>
-      <Container maxWidth="lg">
-        <Grid container spacing={3}>
-          {/* Hoşgeldin Kartı */}
-          <Grid item xs={12}>
-            <Paper 
-              sx={{ 
-                p: 3, 
-                display: 'flex', 
+    <Box sx={{ maxWidth: '1200px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c', p: 3 }}>
+      <Breadcrumb currentPage="Ana Sayfa" />
+      
+      {/* Hoşgeldiniz Kartı */}
+      <Paper
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(44,47,51,0.85)',
+          borderRadius: 2,
+          p: 3,
+          mb: 4,
+          border: '1px solid #23232b',
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(124,58,237,0.1) 100%)'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Avatar
+            src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : '/default-avatar.png'}
+            alt={user?.username}
+            sx={{ width: 64, height: 64, border: '2px solid #6366f1' }}
+          />
+          <Box>
+            <Typography variant="h4" sx={{ color: '#fff', fontWeight: 800, mb: 1 }}>
+              Hoş Geldiniz, {user?.username}!
+            </Typography>
+            <Typography variant="body1" color="#b3b3c6">
+              Discord sunucularınızı yönetmek için hazır mısınız?
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* İstatistik Kartları */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              bgcolor: 'rgba(44,47,51,0.85)',
+              borderRadius: 2,
+              p: 2,
+              border: '1px solid #23232b',
+              height: '100%'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{
+                bgcolor: 'rgba(99,102,241,0.1)',
+                borderRadius: 2,
+                p: 1.5,
+                display: 'flex',
                 alignItems: 'center',
-                borderRadius: 3,
-                background: 'linear-gradient(135deg, #23232b 0%, #23232b 100%)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
+                justifyContent: 'center'
+              }}>
+                <DashboardIcon sx={{ color: '#6366f1', fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography variant="h4" sx={{ color: '#fff', fontWeight: 700 }}>
+                  {stats.totalServers}
+                </Typography>
+                <Typography variant="body2" color="#b3b3c6">
+                  Toplam Sunucu
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              bgcolor: 'rgba(44,47,51,0.85)',
+              borderRadius: 2,
+              p: 2,
+              border: '1px solid #23232b',
+              height: '100%'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{
+                bgcolor: 'rgba(99,102,241,0.1)',
+                borderRadius: 2,
+                p: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <StarIcon sx={{ color: '#6366f1', fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography variant="h4" sx={{ color: '#fff', fontWeight: 700 }}>
+                  {stats.adminServers}
+                </Typography>
+                <Typography variant="body2" color="#b3b3c6">
+                  Yönetici Olduğunuz
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              bgcolor: 'rgba(44,47,51,0.85)',
+              borderRadius: 2,
+              p: 2,
+              border: '1px solid #23232b',
+              height: '100%'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{
+                bgcolor: 'rgba(99,102,241,0.1)',
+                borderRadius: 2,
+                p: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <PeopleIcon sx={{ color: '#6366f1', fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography variant="h4" sx={{ color: '#fff', fontWeight: 700 }}>
+                  {stats.totalMembers}
+                </Typography>
+                <Typography variant="body2" color="#b3b3c6">
+                  Toplam Üye
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              bgcolor: 'rgba(44,47,51,0.85)',
+              borderRadius: 2,
+              p: 2,
+              border: '1px solid #23232b',
+              height: '100%'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{
+                bgcolor: 'rgba(99,102,241,0.1)',
+                borderRadius: 2,
+                p: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <ShieldIcon sx={{ color: '#6366f1', fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography variant="h4" sx={{ color: '#fff', fontWeight: 700 }}>
+                  {stats.totalChannels}
+                </Typography>
+                <Typography variant="body2" color="#b3b3c6">
+                  Toplam Kanal
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Typography variant="h3" gutterBottom sx={{ color: '#fff', fontWeight: 800, letterSpacing: '-1px' }}>
+        Sunucularım
+      </Typography>
+      <Typography variant="subtitle1" color="#b3b3c6" sx={{ mb: 3, fontSize: '1.15rem' }}>
+        Yönetebileceğiniz Discord sunucularınızı görüntüleyin ve ayarlarını yapın.
+      </Typography>
+      <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
+      <Grid container spacing={3}>
+        {servers.map((server) => (
+          <Grid item xs={12} sm={6} md={4} key={server.guildId}>
+            <Paper
+              elevation={0}
+              sx={{
+                bgcolor: 'rgba(44,47,51,0.85)',
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: '1px solid #23232b',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                  border: '1px solid #6366f1'
+                }
               }}
             >
-              <Avatar
-                src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
-                alt={user?.username}
-                sx={{ 
-                  width: 64, 
-                  height: 64, 
-                  mr: 2,
-                  border: '2px solid #23232b',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.18)'
-                }}
-              />
-              <Box>
-                <Typography variant="h4" gutterBottom sx={{ color: '#fff', fontWeight: 600 }}>
-                  Hoş Geldin, {user?.username}!
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#b3b3c6' }}>
-                  Discord sunucularınızı yönetmeye başlayın
-                </Typography>
+              <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar
+                  src={server.icon ? `https://cdn.discordapp.com/icons/${server.guildId}/${server.icon}.png` : '/default-server.png'}
+                  alt={server.name}
+                  sx={{ width: 48, height: 48, border: '2px solid #23232b' }}
+                />
+                <Box>
+                  <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>
+                    {server.name}
+                  </Typography>
+                  <Typography variant="body2" color="#b3b3c6">
+                    {server.owner ? 'Sunucu Sahibi' : 'Yönetici'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider sx={{ borderColor: '#23232b' }} />
+
+              <Box sx={{ p: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <PeopleIcon sx={{ color: '#6366f1', fontSize: 20 }} />
+                      <Box>
+                        <Typography variant="body2" color="#b3b3c6">
+                          Üyeler
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>
+                          {server.memberCount || 0}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ChatIcon sx={{ color: '#6366f1', fontSize: 20 }} />
+                      <Box>
+                        <Typography variant="body2" color="#b3b3c6">
+                          Kanallar
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>
+                          {server.channels?.length || 0}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <EmojiEventsIcon sx={{ color: '#6366f1', fontSize: 20 }} />
+                      <Box>
+                        <Typography variant="body2" color="#b3b3c6">
+                          Roller
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>
+                          {server.roles?.length || 0}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <SecurityIcon sx={{ color: '#6366f1', fontSize: 20 }} />
+                      <Box>
+                        <Typography variant="body2" color="#b3b3c6">
+                          Moderasyon
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>
+                          {server.moderationEnabled ? 'Aktif' : 'Pasif'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider sx={{ borderColor: '#23232b' }} />
+
+              <Box sx={{ p: 2 }}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<SettingsIcon />}
+                  onClick={() => handleSettingsClick(server)}
+                  sx={{
+                    background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                    color: '#fff',
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    py: 1,
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                      opacity: 0.95,
+                    },
+                  }}
+                >
+                  Ayarları Yönet
+                </Button>
               </Box>
             </Paper>
           </Grid>
-
-          {/* İstatistik Kartları */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ 
-              borderRadius: 3,
-              bgcolor: '#23232b',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.18)'
-              }
-            }}>
-              <CardContent>
-                <Typography color="#b3b3c6" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                  Toplam Sunucu
-                </Typography>
-                <Typography variant="h4" sx={{ color: '#fff', fontWeight: 600 }}>
-                  {servers.length}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card sx={{ 
-              borderRadius: 3,
-              bgcolor: '#23232b',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.18)'
-              }
-            }}>
-              <CardContent>
-                <Typography color="#b3b3c6" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                  Toplam Üye
-                </Typography>
-                <Typography variant="h4" sx={{ color: '#fff', fontWeight: 600 }}>
-                  {servers.reduce((acc, server) => acc + (server.memberCount || 0), 0)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card sx={{ 
-              borderRadius: 3,
-              bgcolor: '#23232b',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.18)'
-              }
-            }}>
-              <CardContent>
-                <Typography color="#b3b3c6" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                  Aktif Bot
-                </Typography>
-                <Typography variant="h4" sx={{ color: '#fff', fontWeight: 600 }}>
-                  {servers.filter(server => server.hasBot).length}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Sunucu Listesi */}
-          <Grid item xs={12}>
-            <Paper sx={{ 
-              p: 2,
-              borderRadius: 3,
-              bgcolor: '#23232b',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.10)'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{ color: '#fff', fontWeight: 600 }}>
-                Sunucularınız
-              </Typography>
-              <List>
-                {servers.map((server, index) => (
-                  <React.Fragment key={server._id || server.id}>
-                    <ListItem
-                      sx={{
-                        borderRadius: 2,
-                        '&:hover': {
-                          backgroundColor: 'rgba(99,102,241,0.06)'
-                        }
-                      }}
-                      secondaryAction={
-                        <Button
-                          variant="contained"
-                          startIcon={<SettingsIcon />}
-                          onClick={() => handleSettingsClick(server)}
-                          sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            boxShadow: 'none',
-                            bgcolor: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                            background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                            color: '#fff',
-                            '&:hover': {
-                              boxShadow: 'none',
-                              bgcolor: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                              background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                              opacity: 0.95
-                            }
-                          }}
-                        >
-                          Yönet
-                        </Button>
-                      }
-                    >
-                      <ListItemAvatar>
-                        <Avatar 
-                          src={server.icon ? `https://cdn.discordapp.com/icons/${server.guildId}/${server.icon}.png` : undefined}
-                          alt={server.name}
-                          sx={{
-                            border: '2px solid #23232b',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.18)'
-                          }}
-                        >
-                          {server.name.charAt(0)}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Typography sx={{ fontWeight: 500, color: '#fff' }}>
-                            {server.name}
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography sx={{ color: '#b3b3c6', fontSize: '0.875rem' }}>
-                            {server.memberCount || 0} üye
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                    {index < servers.length - 1 && <Divider sx={{ my: 1, borderColor: '#23232b' }} />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Container>
+        ))}
+      </Grid>
     </Box>
   );
 } 

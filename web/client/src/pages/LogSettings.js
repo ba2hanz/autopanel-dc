@@ -117,12 +117,12 @@ export default function LogSettings() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: '600px', margin: '0 auto', minHeight: '100vh', bgcolor: 'linear-gradient(135deg, #23232b 0%, #18181c 100%)' }}>
+    <Box sx={{ maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c', p: 3 }}>
       <Typography variant="h3" gutterBottom sx={{ color: '#fff', fontWeight: 800, letterSpacing: '-1px' }}>
         Denetim Kaydı Ayarları
       </Typography>
       <Typography variant="subtitle1" color="#b3b3c6" sx={{ mb: 3, fontSize: '1.15rem' }}>
-        Sunucunuzda olan biteni kaydedin ve denetleyin.
+        Sunucunuzda gerçekleşen olayların kaydını tutun ve yönetin.
       </Typography>
       <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -142,16 +142,19 @@ export default function LogSettings() {
           },
           position: 'relative',
         }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={settings.enabled}
-                onChange={e => handleChange('enabled', e.target.checked)}
-                color="primary"
-              />
-            }
-            label="Log Kanalını Etkinleştir"
-          />
+          <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
+            <Switch
+              checked={settings.enabled}
+              onChange={e => handleChange('enabled', e.target.checked)}
+              color="primary"
+            />
+          </Box>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Denetim Kaydı
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
+            Sunucunuzda gerçekleşen önemli olayların kaydını tutar.
+          </Typography>
           {settings.enabled && (
             <FormControl fullWidth sx={{ mt: 2 }}>
               <InputLabel>Log Kanalı</InputLabel>

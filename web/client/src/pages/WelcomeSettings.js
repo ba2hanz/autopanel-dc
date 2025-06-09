@@ -120,7 +120,7 @@ export default function WelcomeSettings() {
   }
 
   return (
-    <Box sx={{ maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: 'linear-gradient(135deg, #23232b 0%, #18181c 100%)', p: 3 }}>
+    <Box sx={{ maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c', p: 3 }}>
       <Typography variant="h3" gutterBottom sx={{ color: '#fff', fontWeight: 800, letterSpacing: '-1px' }}>
         Hoş Geldin Mesajı Ayarları
       </Typography>
@@ -145,16 +145,19 @@ export default function WelcomeSettings() {
           },
           position: 'relative',
         }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={settings.enabled}
-                onChange={e => handleChange('enabled', e.target.checked)}
-                color="primary"
-              />
-            }
-            label="Hoş Geldin Mesajını Etkinleştir"
-          />
+          <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
+            <Switch
+              checked={settings.enabled}
+              onChange={e => handleChange('enabled', e.target.checked)}
+              color="primary"
+            />
+          </Box>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Hoş Geldin Mesajı
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
+            Sunucuya yeni katılan üyelere otomatik hoş geldin mesajı gönderir.
+          </Typography>
           {settings.enabled && (
             <>
               <FormControl fullWidth sx={{ mt: 2 }}>

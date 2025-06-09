@@ -1,244 +1,249 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Container, Stack, AppBar, Toolbar } from '@mui/material';
-import ForumIcon from '@mui/icons-material/Forum';
-import LogoIcon from '@mui/icons-material/Apps';
-import { useAuth } from '../contexts/AuthContext';
+import {
+  Box,
+  Typography,
+  Button,
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Avatar,
+  Stack,
+  Divider
+} from '@mui/material';
+import {
+  Security as SecurityIcon,
+  AutoFixHigh as AutoFixHighIcon,
+  EmojiEvents as EmojiEventsIcon,
+  Forum as ForumIcon,
+  HowToVote as HowToVoteIcon,
+  Poll as PollIcon
+} from '@mui/icons-material';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const DISCORD_CLIENT_ID = '1380428201406369862';
+const BOT_INVITE_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&permissions=8&scope=bot+applications.commands`;
 
-// Discord bot davet linki
-const DISCORD_CLIENT_ID = process.env.REACT_APP_DISCORD_CLIENT_ID || 'BOT_CLIENT_ID';
-const BOT_INVITE_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`;
+const features = [
+  {
+    icon: <SecurityIcon sx={{ fontSize: 40, color: '#6366f1' }} />,
+    title: 'Otomatik Moderasyon',
+    description: 'Sunucunuzu otomatik olarak yönetin ve kötüye kullanımı engelleyin.'
+  },
+  {
+    icon: <AutoFixHighIcon sx={{ fontSize: 40, color: '#6366f1' }} />,
+    title: 'Otomatik Cevap',
+    description: 'Belirli mesajlara otomatik cevaplar verin ve sunucunuzu daha interaktif hale getirin.'
+  },
+  {
+    icon: <EmojiEventsIcon sx={{ fontSize: 40, color: '#6366f1' }} />,
+    title: 'Karşılama & Veda',
+    description: 'Yeni üyelere hoş geldin mesajları gönderin ve ayrılan üyeleri uğurlayın.'
+  },
+  {
+    icon: <ForumIcon sx={{ fontSize: 40, color: '#6366f1' }} />,
+    title: 'Denetim Kaydı',
+    description: 'Sunucunuzda gerçekleşen önemli olayların kaydını tutun.'
+  },
+  {
+    icon: <PollIcon sx={{ fontSize: 40, color: '#6366f1' }} />,
+    title: 'Anketler',
+    description: 'Sunucunuzda anketler oluşturun ve üyelerinizin görüşlerini alın.'
+  },
+  {
+    icon: <HowToVoteIcon sx={{ fontSize: 40, color: '#6366f1' }} />,
+    title: 'Tepki Rolleri',
+    description: 'Mesajlara tepki vererek rol alınmasını sağlayın.'
+  }
+];
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, loading, user } = useAuth();
-
-  // Şimşek animasyonları için state
-  const [lightnings, setLightnings] = useState([]);
-  const lightningId = useRef(0);
-
-  // Mouse tıklamasında şimşek ekle
-  const handleLightning = (e) => {
-    // Sadece ana kutuya tıklanırsa çalışsın
-    if (e.target.id !== 'lightning-bg') return;
-    const rect = e.target.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const id = lightningId.current++;
-    setLightnings((prev) => [...prev, { id, x, y }]);
-    setTimeout(() => {
-      setLightnings((prev) => prev.filter((l) => l.id !== id));
-    }, 400);
-  };
-
-  // Şimşek SVG'si (basit yıldırım şekli)
-  const LightningSVG = ({ x, y }) => (
-    <svg
-      style={{
-        position: 'absolute',
-        left: x - 16,
-        top: y - 32,
-        pointerEvents: 'none',
-        zIndex: 10,
-        filter: 'drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #facc15) drop-shadow(0 0 32px #fbbf24)'
-      }}
-      width="32"
-      height="64"
-      viewBox="0 0 32 64"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <polyline
-        points="16,0 12,28 20,28 8,64 24,36 14,36 20,0"
-        stroke="#facc15"
-        strokeWidth="4"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <polyline
-        points="16,0 12,28 20,28 8,64 24,36 14,36 20,0"
-        stroke="#fffbe6"
-        strokeWidth="2"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </svg>
-  );
-
-  // Sağ üstteki Giriş Yap butonu için
-  const handleLoginClick = async () => {
-    if (loading) return;
-    try {
-      const response = await fetch(`${API_URL}/api/auth/discord`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      });
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        window.location.href = `${API_URL}/api/auth/discord`;
-      }
-    } catch {
-      window.location.href = `${API_URL}/api/auth/discord`;
-    }
-  };
-
-  // Kontrol Paneli butonu için
-  const handlePanelClick = async () => {
-    if (loading) return;
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    } else {
-      try {
-        const response = await fetch(`${API_URL}/api/auth/discord?redirect=dashboard`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include'
-        });
-        const data = await response.json();
-        if (data.url) {
-          // redirect=dashboard parametresi yoksa ekle
-          const url = data.url.includes('redirect=dashboard')
-            ? data.url
-            : data.url + (data.url.includes('?') ? '&' : '?') + 'redirect=dashboard';
-          window.location.href = url;
-        } else {
-          window.location.href = `${API_URL}/api/auth/discord?redirect=dashboard`;
-        }
-      } catch {
-        window.location.href = `${API_URL}/api/auth/discord?redirect=dashboard`;
-      }
-    }
-  };
 
   return (
-    <Box
-      id="lightning-bg"
-      sx={{
-        minHeight: '100vh',
+    <Box sx={{ minHeight: '100vh', bgcolor: '#18181c' }}>
+      {/* Hero Section */}
+      <Box sx={{
+        background: 'linear-gradient(135deg, #23232b 0%, #18181c 100%)',
+        py: 8,
         position: 'relative',
-        overflow: 'hidden',
-        background: 'linear-gradient(135deg, rgba(24, 24, 28, 0.9) 0%, rgba(35, 35, 43, 0.9) 100%)'
-      }}
-      onClick={handleLightning}
-    >
-      {/* Şimşek SVG'leri */}
-      {lightnings.map((l) => (
-        <LightningSVG key={l.id} x={l.x} y={l.y} />
-      ))}
-      {/* Diğer içerikler ve gradient arka plan */}
-      <Box sx={{ 
-        position: 'relative', 
-        zIndex: 1, 
-        minHeight: '100vh', 
-        background: 'transparent',
+        overflow: 'hidden'
       }}>
-        {/* Üst bar */}
-        <AppBar position="static" sx={{ background: 'transparent', boxShadow: 'none', pt: 2 }}>
-          <Toolbar sx={{ justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <LogoIcon sx={{ fontSize: 36, color: '#fff', mr: 1 }} />
-              <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-1px', color: '#fff' }}>
-                AutoPanel
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Typography variant="h2" sx={{ color: '#fff', fontWeight: 800, mb: 2, letterSpacing: '-1px' }}>
+                Discord Sunucunuzu Güçlendirin
               </Typography>
-            </Box>
-            {/* Sağ üstte giriş yap veya profil */}
-            {isAuthenticated ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
-                <img
-                  src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'}
-                  alt={user?.username || 'Profil'}
-                  style={{ width: 40, height: 40, borderRadius: '50%', marginRight: 8, border: '2px solid #fff', boxShadow: '0 2px 8px rgba(99,102,241,0.18)' }}
+              <Typography variant="h5" sx={{ color: '#b3b3c6', mb: 4, lineHeight: 1.5 }}>
+                Otomatik moderasyon, anketler, tepki rolleri ve daha fazlası ile sunucunuzu yönetin.
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={() => navigate('/login')}
+                  sx={{
+                    background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                    color: '#fff',
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    px: 4,
+                    py: 1.5,
+                    boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                      opacity: 0.95,
+                    },
+                  }}
+                >
+                  Giriş Yap
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  href={BOT_INVITE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    borderColor: '#6366f1',
+                    color: '#6366f1',
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    px: 4,
+                    py: 1.5,
+                    '&:hover': {
+                      borderColor: '#7c3aed',
+                      color: '#7c3aed',
+                      bgcolor: 'rgba(99,102,241,0.08)',
+                    },
+                  }}
+                >
+                  Discord'a Ekle
+                </Button>
+              </Stack>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Box sx={{
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: -20,
+                  right: -20,
+                  width: '100%',
+                  height: '100%',
+                  background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0) 70%)',
+                  borderRadius: '50%',
+                  zIndex: 0
+                }
+              }}>
+                <Avatar
+                  src="/bot-avatar.png"
+                  alt="Bot Avatar"
+                  sx={{
+                    width: 300,
+                    height: 300,
+                    mx: 'auto',
+                    border: '4px solid #23232b',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+                  }}
                 />
-                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{user?.username}</Typography>
               </Box>
-            ) : (
-              <Button
-                variant="contained"
-                sx={{
-                  background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                  color: '#fff',
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1.2,
-                  boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
-                  '&:hover': {
-                    background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
-                    opacity: 0.95,
-                  },
-                }}
-                onClick={handleLoginClick}
-                disabled={loading}
-              >
-                Giriş Yap
-              </Button>
-            )}
-          </Toolbar>
-        </AppBar>
-        <Container maxWidth="md" sx={{ pt: 12, pb: 8 }}>
-          <Stack spacing={4} alignItems="center">
-            <Typography variant="h2" align="center" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-2px', mb: 2 }}>
-              Discord için ihtiyacınız olan tek botla tanışın
-            </Typography>
-            <Typography variant="h5" align="center" sx={{ color: '#b3b3c6', fontWeight: 400, mb: 2 }}>
-              Birçok özellik barındıran ve her geçen gün daha da gelişen AutoPanel ile sunucunuzu renklendirin.
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <Button
-                variant="contained"
-                startIcon={<ForumIcon />}
-                sx={{
-                  background: 'linear-gradient(90deg, #5865F2 0%, #7c3aed 100%)',
-                  color: '#fff',
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1.2,
-                  boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
-                  '&:hover': {
-                    background: 'linear-gradient(90deg, #7c3aed 0%, #5865F2 100%)',
-                    opacity: 0.95,
-                  },
-                }}
-                href={BOT_INVITE_URL}
-                target="_blank"
-              >
-                Discord'a Ekle
-              </Button>
-              <Button
-                variant="outlined"
-                sx={{
-                  color: '#fff',
-                  borderColor: '#6366f1',
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1.2,
-                  '&:hover': {
-                    borderColor: '#7c3aed',
-                    background: 'rgba(99,102,241,0.08)'
-                  },
-                }}
-                onClick={handlePanelClick}
-                disabled={loading}
-              >
-                Kontrol Paneli
-              </Button>
-            </Stack>
-          </Stack>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Features Section */}
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Typography variant="h3" align="center" sx={{ color: '#fff', fontWeight: 800, mb: 6, letterSpacing: '-1px' }}>
+          Özellikler
+        </Typography>
+        <Grid container spacing={4}>
+          {features.map((feature, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <Card sx={{
+                height: '100%',
+                bgcolor: 'rgba(44,47,51,0.85)',
+                boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+                border: '1px solid #23232b',
+                transition: 'box-shadow 0.2s, border 0.2s',
+                '&:hover': {
+                  boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+                  border: '1.5px solid #6366f1',
+                },
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    {feature.icon}
+                    <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, ml: 2 }}>
+                      {feature.title}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="#b3b3c6">
+                    {feature.description}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
+      {/* Footer */}
+      <Box sx={{ bgcolor: '#23232b', py: 4, mt: 8 }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, mb: 2 }}>
+                AutoPanel Bot
+              </Typography>
+              <Typography variant="body2" color="#b3b3c6">
+                Discord sunucunuzu yönetmek için ihtiyacınız olan her şey.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Stack direction="row" spacing={2} justifyContent="flex-end">
+                <Button
+                  variant="outlined"
+                  href={BOT_INVITE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    borderColor: '#6366f1',
+                    color: '#6366f1',
+                    '&:hover': {
+                      borderColor: '#7c3aed',
+                      color: '#7c3aed',
+                      bgcolor: 'rgba(99,102,241,0.08)',
+                    },
+                  }}
+                >
+                  Discord'a Ekle
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate('/login')}
+                  sx={{
+                    background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                    color: '#fff',
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                      opacity: 0.95,
+                    },
+                  }}
+                >
+                  Giriş Yap
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
+          <Divider sx={{ my: 4, borderColor: '#23232b' }} />
+          <Typography variant="body2" color="#b3b3c6" align="center">
+            © 2024 AutoPanel Bot. Tüm hakları saklıdır.
+          </Typography>
         </Container>
       </Box>
     </Box>

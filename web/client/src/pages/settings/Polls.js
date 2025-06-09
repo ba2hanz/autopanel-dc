@@ -21,11 +21,14 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Divider,
+  Stack
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { useParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -174,75 +177,143 @@ export default function Polls() {
   }
 
   return (
-    <Box sx={{ maxWidth: '1200px', margin: '0 auto', p: 3 }}>
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            Anket Oluştur
+    <Box sx={{ maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c', p: 3 }}>
+      <Typography variant="h3" gutterBottom sx={{ color: '#fff', fontWeight: 800, letterSpacing: '-1px' }}>
+        Anket Ayarları
+      </Typography>
+      <Typography variant="subtitle1" color="#b3b3c6" sx={{ mb: 3, fontSize: '1.15rem' }}>
+        Sunucunuzda anketler oluşturun ve yönetin.
+      </Typography>
+      <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }}>Anket başarıyla oluşturuldu!</Alert>}
+      <Stack spacing={3}>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+          position: 'relative',
+        }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Yeni Anket Oluştur
           </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Kanal Seçin</InputLabel>
-                <Select
-                  value={channelId}
-                  onChange={(e) => setChannelId(e.target.value)}
-                  label="Kanal Seçin"
-                >
-                  {channels.map((channel) => (
-                    <MenuItem key={channel.id} value={channel.id}>
-                      #{channel.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setOpenDialog(true)}
-                fullWidth
-              >
-                Yeni Anket Oluştur
-              </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
+            Sunucunuzda yeni bir anket oluşturun.
+          </Typography>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Anket Kanalı</InputLabel>
+            <Select
+              value={channelId}
+              onChange={(e) => setChannelId(e.target.value)}
+              label="Anket Kanalı"
+            >
+              {channels.map((channel) => (
+                <MenuItem key={channel.id} value={channel.id}>
+                  #{channel.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Anket Sorusu"
+            value={newPoll.question}
+            onChange={(e) => setNewPoll(prev => ({ ...prev, question: e.target.value }))}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Seçenekler (Her satıra bir seçenek)"
+            value={newPoll.options.join('\n')}
+            onChange={(e) => setNewPoll(prev => ({ ...prev, options: e.target.value.split('\n').filter(Boolean) }))}
+            fullWidth
+            multiline
+            minRows={3}
+            sx={{ mb: 2 }}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                color: '#fff',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                  opacity: 0.95,
+                },
+              }}
+              startIcon={<AddIcon />}
+              onClick={() => setOpenDialog(true)}
+              disabled={loading}
+            >
+              {loading ? 'Oluşturuluyor...' : 'Anket Oluştur'}
+            </Button>
+          </Box>
+        </Box>
 
-      <Card>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+        }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
             Mevcut Anketler
           </Typography>
-          {polls.length === 0 ? (
-            <Typography color="text.secondary">
-              Henüz hiç anket oluşturulmamış.
-            </Typography>
-          ) : (
-            <List>
-              {polls.map((poll) => (
-                <ListItem key={poll.id}>
-                  <ListItemText
-                    primary={poll.question}
-                    secondary={`Süre: ${poll.duration} saat`}
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      aria-label="delete"
-                      onClick={() => handleDeletePoll(poll.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </CardContent>
-      </Card>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
+            Sunucunuzdaki aktif anketleri görüntüleyin ve yönetin.
+          </Typography>
+          <List>
+            {polls.map((poll) => (
+              <ListItem
+                key={poll._id}
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.2)',
+                  borderRadius: 1,
+                  mb: 1,
+                  '&:hover': {
+                    bgcolor: 'rgba(0,0,0,0.3)',
+                  },
+                }}
+              >
+                <ListItemText
+                  primary={poll.question}
+                  secondary={`Kanal: #${channels.find(c => c.id === poll.channelId)?.name || 'Bilinmiyor'}`}
+                />
+                <ListItemSecondaryAction>
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => handleDeletePoll(poll._id)}
+                    sx={{ color: '#ef4444' }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Stack>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Yeni Anket Oluştur</DialogTitle>
@@ -301,17 +372,6 @@ export default function Polls() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mt: 2 }}>
-          {success}
-        </Alert>
-      )}
     </Box>
   );
 } 

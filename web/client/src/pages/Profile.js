@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  Container,
-  Paper,
   Typography,
-  Grid,
   Avatar,
   Button,
   Divider,
@@ -16,7 +13,8 @@ import {
   Switch,
   FormControlLabel,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Stack
 } from '@mui/material';
 import {
   Logout as LogoutIcon,
@@ -127,181 +125,154 @@ export default function Profile() {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#18181c' }}>
-        <CircularProgress />
+        <CircularProgress sx={{ color: '#6366f1' }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#18181c', py: 4 }}>
-      <Container maxWidth="lg">
-        <Grid container spacing={3}>
-          {/* Profil Kartı */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, textAlign: 'center' }}>
-              <Avatar
-                src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
-                alt={user?.username}
-                sx={{ width: 120, height: 120, mx: 'auto', mb: 2 }}
-              />
-              <Typography variant="h5" gutterBottom>
+    <Box sx={{ maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c', p: 3 }}>
+      <Typography variant="h3" gutterBottom sx={{ color: '#fff', fontWeight: 800, letterSpacing: '-1px' }}>
+        Profil Ayarları
+      </Typography>
+      <Typography variant="subtitle1" color="#b3b3c6" sx={{ mb: 3, fontSize: '1.15rem' }}>
+        Hesap ayarlarınızı yönetin ve tercihlerinizi özelleştirin.
+      </Typography>
+      <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Stack spacing={3}>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Avatar
+              src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
+              alt={user?.username}
+              sx={{ width: 80, height: 80, mr: 3 }}
+            />
+            <Box>
+              <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
                 {user?.username}
               </Typography>
-              <Typography variant="body1" color="text.secondary" gutterBottom>
-                {user?.email}
+              <Typography variant="body2" color="#b3b3c6">
+                Discord ID: {user?.discordId}
               </Typography>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<LogoutIcon />}
-                onClick={handleLogout}
-                sx={{ mt: 2 }}
-              >
-                Çıkış Yap
-              </Button>
-            </Paper>
-          </Grid>
-
-          {/* Ayarlar */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Hesap Ayarları
-              </Typography>
-
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
-
-              <List>
-                <ListItem>
-                  <ListItemIcon>
-                    <NotificationsIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Bildirimler"
-                    secondary="E-posta ve Discord bildirimlerini yönetin"
+            </Box>
+          </Box>
+          <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
+          <List>
+            <ListItem>
+              <ListItemIcon>
+                <NotificationsIcon sx={{ color: '#6366f1' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Bildirimler"
+                secondary="E-posta ve Discord bildirimlerini yönetin"
+              />
+              <Switch
+                checked={settings.notifications.email}
+                onChange={(e) => handleSettingChange('notifications.email', e.target.checked)}
+                color="primary"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <DarkModeIcon sx={{ color: '#6366f1' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Karanlık Mod"
+                secondary="Arayüz temasını değiştirin"
+              />
+              <Switch
+                checked={settings.darkMode}
+                onChange={(e) => handleSettingChange('darkMode', e.target.checked)}
+                color="primary"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <LanguageIcon sx={{ color: '#6366f1' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Dil"
+                secondary="Arayüz dilini değiştirin"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.language === 'en'}
+                    onChange={(e) => handleSettingChange('language', e.target.checked ? 'en' : 'tr')}
+                    color="primary"
                   />
-                  <Box>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={settings.notifications.email}
-                          onChange={(e) => handleSettingChange('notifications', {
-                            ...settings.notifications,
-                            email: e.target.checked
-                          })}
-                        />
-                      }
-                      label="E-posta"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={settings.notifications.discord}
-                          onChange={(e) => handleSettingChange('notifications', {
-                            ...settings.notifications,
-                            discord: e.target.checked
-                          })}
-                        />
-                      }
-                      label="Discord"
-                    />
-                  </Box>
-                </ListItem>
+                }
+                label={settings.language === 'en' ? 'English' : 'Türkçe'}
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <SecurityIcon sx={{ color: '#6366f1' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="İki Faktörlü Doğrulama"
+                secondary="Hesap güvenliğinizi artırın"
+              />
+              <Switch
+                checked={settings.twoFactor}
+                onChange={(e) => handleSettingChange('twoFactor', e.target.checked)}
+                color="primary"
+              />
+            </ListItem>
+          </List>
+        </Box>
 
-                <Divider />
-
-                <ListItem>
-                  <ListItemIcon>
-                    <DarkModeIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Karanlık Mod"
-                    secondary="Arayüz temasını değiştirin"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.darkMode}
-                        onChange={(e) => handleSettingChange('darkMode', e.target.checked)}
-                      />
-                    }
-                    label=""
-                  />
-                </ListItem>
-
-                <Divider />
-
-                <ListItem>
-                  <ListItemIcon>
-                    <SecurityIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="İki Faktörlü Doğrulama"
-                    secondary="Hesap güvenliğinizi artırın"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.twoFactor}
-                        onChange={(e) => handleSettingChange('twoFactor', e.target.checked)}
-                      />
-                    }
-                    label=""
-                  />
-                </ListItem>
-
-                <Divider />
-
-                <ListItem>
-                  <ListItemIcon>
-                    <LanguageIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Dil"
-                    secondary="Arayüz dilini değiştirin"
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleSettingChange('language', settings.language === 'tr' ? 'en' : 'tr')}
-                  >
-                    {settings.language === 'tr' ? 'English' : 'Türkçe'}
-                  </Button>
-                </ListItem>
-              </List>
-            </Paper>
-
-            {/* Hesap İstatistikleri */}
-            <Paper sx={{ p: 3, mt: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Hesap İstatistikleri
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Sunucu Sayısı
-                  </Typography>
-                  <Typography variant="h4">
-                    {user?.servers?.length || 0}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Son Giriş
-                  </Typography>
-                  <Typography variant="h4">
-                    {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Container>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+        }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 2 }}>
+            Hesap İşlemleri
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+            sx={{
+              background: 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)',
+              color: '#fff',
+              borderRadius: 2,
+              fontWeight: 600,
+              px: 3,
+              py: 1.2,
+              boxShadow: '0 2px 8px rgba(239,68,68,0.18)',
+              '&:hover': {
+                background: 'linear-gradient(90deg, #dc2626 0%, #ef4444 100%)',
+                opacity: 0.95,
+              },
+            }}
+          >
+            Çıkış Yap
+          </Button>
+        </Box>
+      </Stack>
     </Box>
   );
 } 
