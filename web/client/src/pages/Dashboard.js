@@ -22,6 +22,7 @@ import { Settings as SettingsIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { toast } from 'react-hot-toast';
+import Breadcrumb from '../components/Breadcrumb';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -144,6 +145,7 @@ export default function Dashboard() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#18181c', py: 4 }}>
       <Container maxWidth="lg">
+        <Breadcrumb />
         <Grid container spacing={3}>
           {/* Hoşgeldin Kartı */}
           <Grid item xs={12}>

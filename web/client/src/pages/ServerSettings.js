@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -7,7 +7,7 @@ import {
   Typography,
   Grid,
   CardActionArea,
-  Stack
+  CircularProgress
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import SecurityIcon from '@mui/icons-material/Security';
@@ -15,6 +15,8 @@ import ForumIcon from '@mui/icons-material/Forum';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import TagFacesIcon from '@mui/icons-material/TagFaces';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const settingsOptions = [
   {
@@ -64,6 +66,45 @@ const settingsOptions = [
 export default function ServerSettings() {
   const navigate = useNavigate();
   const { guildId } = useParams();
+  const [loading, setLoading] = useState(true);
+  const [server, setServer] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchServer = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/servers/${guildId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) throw new Error('Sunucu bilgileri yüklenemedi');
+        const data = await response.json();
+        setServer(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServer();
+  }, [guildId]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: '1200px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c', p: 3 }}>

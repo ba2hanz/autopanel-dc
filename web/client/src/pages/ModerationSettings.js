@@ -67,6 +67,7 @@ export default function ModerationSettings() {
     spamIgnoredRoles: [],
   });
   const [discordData, setDiscordData] = useState({ channels: [], roles: [] });
+  const [server, setServer] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,6 +81,7 @@ export default function ModerationSettings() {
         });
         if (!response.ok) throw new Error('Sunucu ayarları yüklenemedi');
         const serverData = await response.json();
+        setServer(serverData);
         if (serverData.settings) {
           setSettings({
             enableBadwordsFilter: serverData.settings.enableBadwordsFilter || false,
@@ -205,20 +207,38 @@ export default function ModerationSettings() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c' }}>
-      <Typography variant="h4" gutterBottom>Otomatik Moderasyon</Typography>
-      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
+    <Box sx={{ p: 3, maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: 'linear-gradient(135deg, #23232b 0%, #18181c 100%)' }}>
+      <Typography variant="h3" gutterBottom sx={{ color: '#fff', fontWeight: 800, letterSpacing: '-1px' }}>
+        Otomatik Moderasyon
+      </Typography>
+      <Typography variant="subtitle1" color="#b3b3c6" sx={{ mb: 3, fontSize: '1.15rem' }}>
         Sunucu moderasyonunu otomatikleştirir
       </Typography>
+      <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
       <Stack spacing={4}>
         {/* Link/Davet Filtresi */}
-        <Card elevation={2} sx={{ p: 3, position: 'relative' }}>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+          position: 'relative',
+        }}>
           <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
             <Switch checked={settings.enableLinkFilter} onChange={e => handleChange('enableLinkFilter', e.target.checked)} color="primary" />
           </Box>
-          <Typography variant="h6" gutterBottom>Link/Davet Filtresi</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Link veya davet içeren mesajları engeller.
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Reklamları Engelle
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
+            Reklam içeren mesajları siler
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Eylem</InputLabel>
@@ -240,8 +260,8 @@ export default function ModerationSettings() {
               onChange={e => handleMultiSelect('linkIgnoredChannels', e.target.value)}
               input={<OutlinedInput label="Etkilenmeyen Kanallar" />}
               renderValue={selected => selected.map(id => {
-                const ch = discordData.channels.find(c => c.id === id);
-                return ch ? `#${ch.name}` : id;
+                const channel = discordData.channels.find(c => c.id === id);
+                return channel ? `#${channel.name}` : id;
               }).join(', ')}
             >
               {discordData.channels.map(channel => (
@@ -272,14 +292,52 @@ export default function ModerationSettings() {
               ))}
             </Select>
           </FormControl>
-        </Card>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                color: '#fff',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                  opacity: 0.95,
+                },
+              }}
+              startIcon={<SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Box>
+        </Box>
         {/* Küfür/Argo Filtresi */}
-        <Card elevation={2} sx={{ p: 3, position: 'relative' }}>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+          position: 'relative',
+        }}>
           <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
             <Switch checked={settings.enableBadwordsFilter} onChange={e => handleChange('enableBadwordsFilter', e.target.checked)} color="primary" />
           </Box>
-          <Typography variant="h6" gutterBottom>Küfür/Argo Filtresi</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Küfür/Argo Filtresi
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
             Küfür veya argo içeren mesajları engeller.
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -341,11 +399,49 @@ export default function ModerationSettings() {
               ))}
             </Select>
           </FormControl>
-        </Card>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                color: '#fff',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                  opacity: 0.95,
+                },
+              }}
+              startIcon={<SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Box>
+        </Box>
         {/* Blacklist (Yasaklı Kelime) Filtresi */}
-        <Card elevation={2} sx={{ p: 3, position: 'relative' }}>
-          <Typography variant="h6" gutterBottom>Yasaklı Kelime Filtresi</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+          position: 'relative',
+        }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Yasaklı Kelime Filtresi
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
             Belirlediğiniz kelimeleri içeren mesajları engeller.
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -407,14 +503,52 @@ export default function ModerationSettings() {
               ))}
             </Select>
           </FormControl>
-        </Card>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                color: '#fff',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                  opacity: 0.95,
+                },
+              }}
+              startIcon={<SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Box>
+        </Box>
         {/* Büyük Harf (Caps) Filtresi */}
-        <Card elevation={2} sx={{ p: 3, position: 'relative' }}>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+          position: 'relative',
+        }}>
           <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
             <Switch checked={settings.enableCapsFilter} onChange={e => handleChange('enableCapsFilter', e.target.checked)} color="primary" />
           </Box>
-          <Typography variant="h6" gutterBottom>Büyük Harf (Caps) Filtresi</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Büyük Harf (Caps) Filtresi
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
             Tamamı büyük harf olan mesajları engeller.
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -469,14 +603,52 @@ export default function ModerationSettings() {
               ))}
             </Select>
           </FormControl>
-        </Card>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                color: '#fff',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                  opacity: 0.95,
+                },
+              }}
+              startIcon={<SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Box>
+        </Box>
         {/* Flood (Çok Hızlı Mesaj) Filtresi */}
-        <Card elevation={2} sx={{ p: 3, position: 'relative' }}>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+          position: 'relative',
+        }}>
           <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
             <Switch checked={settings.enableFloodFilter} onChange={e => handleChange('enableFloodFilter', e.target.checked)} color="primary" />
           </Box>
-          <Typography variant="h6" gutterBottom>Flood (Çok Hızlı Mesaj) Filtresi</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Flood (Çok Hızlı Mesaj) Filtresi
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
             Çok kısa sürede tekrar tekrar mesaj atanları engeller.
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -531,14 +703,52 @@ export default function ModerationSettings() {
               ))}
             </Select>
           </FormControl>
-        </Card>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                color: '#fff',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                  opacity: 0.95,
+                },
+              }}
+              startIcon={<SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Box>
+        </Box>
         {/* Spam Filtresi */}
-        <Card elevation={2} sx={{ p: 3, position: 'relative' }}>
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+          position: 'relative',
+        }}>
           <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
             <Switch checked={settings.enableSpamFilter} onChange={e => handleChange('enableSpamFilter', e.target.checked)} color="primary" />
           </Box>
-          <Typography variant="h6" gutterBottom>Spam Filtresi</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+            Spam Filtresi
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
             Aynı mesajı tekrar tekrar atanları engeller.
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -593,17 +803,29 @@ export default function ModerationSettings() {
               ))}
             </Select>
           </FormControl>
-        </Card>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Kaydediliyor...' : 'Kaydet'}
-          </Button>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                color: '#fff',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                  opacity: 0.95,
+                },
+              }}
+              startIcon={<SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Box>
         </Box>
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mt: 2 }}>Ayarlar başarıyla kaydedildi!</Alert>}

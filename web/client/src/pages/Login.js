@@ -23,7 +23,7 @@ export default function Login() {
   const processedCodes = useRef(new Set());
 
   // Callback işleme fonksiyonu
-  const processCallback = useCallback(async (code) => {
+  const processCallback = useCallback(async (code, redirect) => {
     if (!code || isProcessing || processedCodes.current.has(code)) {
       console.log('Code işlenmedi:', { 
         code, 
@@ -62,11 +62,13 @@ export default function Login() {
         
         if (success) {
           console.log('Ana sayfaya yönlendiriliyor...');
-          // URL'den code parametresini temizle
-          navigate('/', { replace: true });
+          if (redirect === 'dashboard') {
+            navigate('/dashboard', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
         } else {
           setError('Token işleme başarısız oldu');
-          // URL'den code parametresini temizle
           navigate('/login', { replace: true });
         }
       } else {
@@ -75,7 +77,6 @@ export default function Login() {
     } catch (err) {
       console.error('Callback işleme hatası:', err);
       setError(err.message || 'Giriş işlemi başarısız oldu. Lütfen tekrar deneyin.');
-      // URL'den code parametresini temizle
       navigate('/login', { replace: true });
     } finally {
       setIsProcessing(false);
@@ -86,21 +87,27 @@ export default function Login() {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const code = searchParams.get('code');
+    const redirect = searchParams.get('redirect');
     console.log('Callback URL:', location.search);
     console.log('Code:', code);
 
     if (code) {
-      processCallback(code);
+      processCallback(code, redirect);
     }
   }, [location.search, processCallback]);
 
-  // Kullanıcı giriş yapmışsa ana sayfaya yönlendir
+  // Kullanıcı giriş yapmışsa yönlendirme
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const redirect = searchParams.get('redirect');
     if (user && !isProcessing) {
-      console.log('Kullanıcı bulundu, ana sayfaya yönlendiriliyor...');
-      navigate('/', { replace: true });
+      if (redirect === 'dashboard') {
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
-  }, [user, navigate, isProcessing]);
+  }, [user, navigate, isProcessing, location.search]);
 
   // Login işlemi
   const handleLogin = async () => {

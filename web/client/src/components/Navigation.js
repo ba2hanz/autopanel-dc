@@ -26,8 +26,10 @@ import {
   Dashboard as DashboardIcon,
   Settings as SettingsIcon,
   ExitToApp as LogoutIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Apps as LogoIcon
 } from '@mui/icons-material';
+import Breadcrumb from './Breadcrumb';
 
 const drawerWidth = 240;
 
@@ -56,7 +58,7 @@ export default function Navigation() {
   const handleLogout = async () => {
     try {
       await logout();
-    navigate('/login');
+      navigate('/');
     } catch (error) {
       console.error('Çıkış hatası:', error);
     }
@@ -111,39 +113,51 @@ export default function Navigation() {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          borderBottom: '2px solid #23232b',
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar disableGutters>
-          <IconButton
-            color="inherit"
+          <Toolbar disableGutters sx={{ minHeight: 64 }}>
+            <IconButton
+              color="inherit"
               aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-
-            <Typography
-              variant="h6"
-              noWrap
-              component="div"
-              sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: 'none' } }}
             >
-              AutoPanel
-          </Typography>
+              <MenuIcon />
+            </IconButton>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+              <LogoIcon sx={{ fontSize: 36, color: '#fff', mr: 1 }} />
+              <Typography
+                variant="h5"
+                noWrap
+                component="div"
+                sx={{ fontWeight: 800, letterSpacing: '-1px', color: '#fff', mr: 2 }}
+              >
+                AutoPanel
+              </Typography>
+              <Box sx={{ width: 2, height: 32, bgcolor: 'rgba(255,255,255,0.18)', borderRadius: 1, mx: 2 }} />
+            </Box>
+
+            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+              <Breadcrumb compact sx={{ color: '#fff' }} />
+            </Box>
 
             <Box sx={{ flexGrow: 0 }}>
               <Tooltip title="Hesap ayarları">
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-            <Avatar
+                  <Avatar
                     alt={user?.username}
-              src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
-            />
-          </IconButton>
+                    src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
+                    sx={{ border: '2px solid #fff', boxShadow: '0 2px 8px rgba(99,102,241,0.18)' }}
+                  />
+                </IconButton>
               </Tooltip>
-          <Menu
+              <Menu
                 sx={{ mt: '45px' }}
                 id="menu-appbar"
                 anchorEl={anchorElUser}
@@ -158,28 +172,28 @@ export default function Navigation() {
                 }}
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
-          >
-            <MenuItem onClick={() => {
-              navigate('/profile');
+              >
+                <MenuItem onClick={() => {
+                  navigate('/profile');
                   handleCloseUserMenu();
-            }}>
-              <ListItemIcon>
-                <PersonIcon fontSize="small" />
-              </ListItemIcon>
+                }}>
+                  <ListItemIcon>
+                    <PersonIcon fontSize="small" />
+                  </ListItemIcon>
                   <Typography textAlign="center">Profil</Typography>
-            </MenuItem>
+                </MenuItem>
                 <MenuItem onClick={() => {
                   handleLogout();
                   handleCloseUserMenu();
                 }}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
                   <Typography textAlign="center">Çıkış Yap</Typography>
-            </MenuItem>
-          </Menu>
+                </MenuItem>
+              </Menu>
             </Box>
-        </Toolbar>
+          </Toolbar>
         </Container>
       </AppBar>
 
@@ -196,7 +210,7 @@ export default function Navigation() {
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, background: 'linear-gradient(135deg, #23232b 0%, #18181c 100%)', color: '#fff', borderRight: '2px solid #23232b' },
           }}
         >
           {drawer}
@@ -205,7 +219,7 @@ export default function Navigation() {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, background: 'linear-gradient(135deg, #23232b 0%, #18181c 100%)', color: '#fff', borderRight: '2px solid #23232b' },
           }}
           open
         >

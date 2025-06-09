@@ -117,7 +117,7 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login');
+      navigate('/');
     } catch (err) {
       console.error('Logout error:', err);
       setError('Failed to logout. Please try again.');

@@ -4,17 +4,18 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
-import Navigation from './components/Navigation';
+import PrivateRoute from './components/PrivateRoute';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ServerPanel from './pages/ServerPanel';
 import ServerSettings from './pages/ServerSettings';
-import Upgrade from './pages/Upgrade';
-import Profile from './pages/Profile';
-import LogSettings from './pages/LogSettings';
 import WelcomeSettings from './pages/WelcomeSettings';
-import EmojiRoleSettings from './pages/EmojiRoleSettings';
+import LogSettings from './pages/LogSettings';
 import ModerationSettings from './pages/ModerationSettings';
+import Upgrade from './pages/Upgrade';
+import LandingPage from './pages/LandingPage';
+import AuthCallback from './pages/AuthCallback';
 import { Toaster } from 'react-hot-toast';
 
 // Discord benzeri koyu tema
@@ -74,12 +75,13 @@ function App() {
             <Toaster position="top-right" />
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/auth/callback" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/" element={<LandingPage />} />
               <Route
-                path="/"
+                path="/dashboard"
                 element={
                   <ProtectedRoute>
-                    <Navigation />
+                    <Layout />
                   </ProtectedRoute>
                 }
               >
@@ -88,10 +90,8 @@ function App() {
                 <Route path="server/:guildId/settings" element={<ServerSettings />} />
                 <Route path="server/:guildId/settings/logs" element={<LogSettings />} />
                 <Route path="server/:guildId/settings/welcome" element={<WelcomeSettings />} />
-                <Route path="server/:guildId/settings/emojirole" element={<EmojiRoleSettings />} />
                 <Route path="server/:guildId/settings/moderation" element={<ModerationSettings />} />
                 <Route path="server/:guildId/upgrade" element={<Upgrade />} />
-                <Route path="profile" element={<Profile />} />
               </Route>
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
