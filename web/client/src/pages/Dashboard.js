@@ -15,19 +15,33 @@ import {
   ListItemAvatar,
   ListItemText,
   Divider,
-  CircularProgress
+  CircularProgress,
+  CardActions
 } from '@mui/material';
 import { Settings as SettingsIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useWebSocket } from '../contexts/WebSocketContext';
+import { toast } from 'react-hot-toast';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, loading: userLoading } = useAuth();
+  const { sendMessage } = useWebSocket();
   const navigate = useNavigate();
   const [servers, setServers] = useState([]);
+  const [selectedServer, setSelectedServer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [settings, setSettings] = useState({
+    welcomeChannel: '',
+    welcomeMessage: '',
+    enableWelcome: false,
+    logChannel: '',
+    enableLogs: false,
+    autoRole: '',
+    enableAutoRole: false
+  });
 
   useEffect(() => {
     const fetchServers = async () => {
@@ -52,6 +66,62 @@ export default function Dashboard() {
     };
     fetchServers();
   }, []);
+
+  const handleSettingsChange = async (newSettings) => {
+    try {
+      // API'ye gönder
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/servers/${selectedServer.id}/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(newSettings)
+      });
+
+      if (!response.ok) {
+        throw new Error('Ayarlar güncellenirken bir hata oluştu');
+      }
+
+      // WebSocket üzerinden bot'a bildir
+      sendMessage({
+        type: 'settings_update',
+        guildId: selectedServer.id,
+        settings: newSettings
+      });
+
+      // Local state'i güncelle
+      setSettings(newSettings);
+      
+      // Sunucu listesini güncelle
+      setServers(prevServers => 
+        prevServers.map(server => 
+          server.id === selectedServer.id 
+            ? { ...server, settings: newSettings }
+            : server
+        )
+      );
+
+      toast.success('Ayarlar başarıyla güncellendi!');
+    } catch (error) {
+      console.error('Ayar güncelleme hatası:', error);
+      toast.error('Ayarlar güncellenirken bir hata oluştu');
+    }
+  };
+
+  const handleSettingsClick = (server) => {
+    setSelectedServer(server);
+    setSettings(server.settings || {
+      welcomeChannel: '',
+      welcomeMessage: '',
+      enableWelcome: false,
+      logChannel: '',
+      enableLogs: false,
+      autoRole: '',
+      enableAutoRole: false
+    });
+    navigate(`/server/${server.guildId}/settings`);
+  };
 
   if (loading) {
     return (
@@ -201,7 +271,7 @@ export default function Dashboard() {
                         <Button
                           variant="contained"
                           startIcon={<SettingsIcon />}
-                          onClick={() => navigate(`/server/${server.guildId}/settings`)}
+                          onClick={() => handleSettingsClick(server)}
                           sx={{
                             borderRadius: 2,
                             textTransform: 'none',

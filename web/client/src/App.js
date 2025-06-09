@@ -3,13 +3,19 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
+import { WebSocketProvider } from './contexts/WebSocketContext';
 import Navigation from './components/Navigation';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ServerPanel from './pages/ServerPanel';
-import Settings from './pages/Settings';
+import ServerSettings from './pages/ServerSettings';
 import Upgrade from './pages/Upgrade';
 import Profile from './pages/Profile';
+import LogSettings from './pages/LogSettings';
+import WelcomeSettings from './pages/WelcomeSettings';
+import EmojiRoleSettings from './pages/EmojiRoleSettings';
+import ModerationSettings from './pages/ModerationSettings';
+import { Toaster } from 'react-hot-toast';
 
 // Discord benzeri koyu tema
 const theme = createTheme({
@@ -22,7 +28,7 @@ const theme = createTheme({
       main: '#43b581', // Discord yeşil
     },
     background: {
-      default: '#36393f', // Discord arka plan
+      default: '#18181c', // Tüm sayfa için koyu arka plan
       paper: '#2f3136',   // Discord kart arka planı
     },
   },
@@ -63,27 +69,34 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/auth/callback" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Navigation />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="server/:guildId" element={<ServerPanel />} />
-              <Route path="server/:guildId/settings" element={<Settings />} />
-              <Route path="server/:guildId/upgrade" element={<Upgrade />} />
-              <Route path="profile" element={<Profile />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </Router>
+        <WebSocketProvider>
+          <Router>
+            <Toaster position="top-right" />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Navigation />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="server/:guildId" element={<ServerPanel />} />
+                <Route path="server/:guildId/settings" element={<ServerSettings />} />
+                <Route path="server/:guildId/settings/logs" element={<LogSettings />} />
+                <Route path="server/:guildId/settings/welcome" element={<WelcomeSettings />} />
+                <Route path="server/:guildId/settings/emojirole" element={<EmojiRoleSettings />} />
+                <Route path="server/:guildId/settings/moderation" element={<ModerationSettings />} />
+                <Route path="server/:guildId/upgrade" element={<Upgrade />} />
+                <Route path="profile" element={<Profile />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Router>
+        </WebSocketProvider>
       </AuthProvider>
     </ThemeProvider>
   );

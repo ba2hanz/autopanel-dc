@@ -406,7 +406,7 @@ router.get('/:guildId', auth, async (req, res) => {
 });
 
 // Update server settings
-router.patch('/:guildId/settings', auth, async (req, res) => {
+router.put('/:guildId', auth, async (req, res) => {
     try {
         const server = await Server.findOne({ guildId: req.params.guildId });
         if (!server) {
@@ -419,12 +419,18 @@ router.patch('/:guildId/settings', auth, async (req, res) => {
             return res.status(403).json({ message: 'Access denied' });
         }
 
-        // Track old logChannel to detect changes
-        const oldLogChannel = server.settings.logChannel;
+        // Update settings
+        if (req.body.settings) {
+            // Ensure settings object exists
+            if (!server.settings) {
+                server.settings = {};
+            }
 
-        // Update settings (allow all fields, including empty values)
-        if (req.body && typeof req.body === 'object') {
-            Object.assign(server.settings, req.body);
+            // Update each setting individually
+            const newSettings = req.body.settings;
+            Object.keys(newSettings).forEach(key => {
+                server.settings[key] = newSettings[key];
+            });
         }
 
         await server.save();
@@ -443,7 +449,10 @@ router.patch('/:guildId/settings', auth, async (req, res) => {
         res.json(server);
     } catch (error) {
         console.error('Update server error:', error);
-        res.status(500).json({ message: 'Error updating server' });
+        res.status(500).json({ 
+            message: 'Error updating server',
+            error: error.message 
+        });
     }
 });
 
