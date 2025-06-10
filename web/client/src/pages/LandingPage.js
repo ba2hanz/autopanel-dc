@@ -23,7 +23,8 @@ import {
 } from '@mui/icons-material';
 
 const DISCORD_CLIENT_ID = '1380428201406369862';
-const BOT_INVITE_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&permissions=8&scope=bot+applications.commands`;
+const REDIRECT_URI = `${window.location.origin}/auth/callback`;
+const DISCORD_AUTH_URL = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20guilds`;
 
 const features = [
   {
@@ -80,48 +81,26 @@ export default function LandingPage() {
                 Otomatik moderasyon, anketler, tepki rolleri ve daha fazlası ile sunucunuzu yönetin.
               </Typography>
               <Stack direction="row" spacing={2}>
-                <Button
-                  variant="contained"
+              <Button
+                variant="contained"
                   size="large"
-                  onClick={() => navigate('/login')}
-                  sx={{
-                    background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                    color: '#fff',
-                    borderRadius: 2,
-                    fontWeight: 600,
+                  href={DISCORD_AUTH_URL}
+                sx={{
+                  background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                  color: '#fff',
+                  borderRadius: 2,
+                  fontWeight: 600,
                     px: 4,
                     py: 1.5,
-                    boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
-                    '&:hover': {
-                      background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
-                      opacity: 0.95,
-                    },
-                  }}
-                >
-                  Giriş Yap
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  href={BOT_INVITE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    borderColor: '#6366f1',
-                    color: '#6366f1',
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    px: 4,
-                    py: 1.5,
-                    '&:hover': {
-                      borderColor: '#7c3aed',
-                      color: '#7c3aed',
-                      bgcolor: 'rgba(99,102,241,0.08)',
-                    },
-                  }}
-                >
-                  Discord'a Ekle
-                </Button>
+                  boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                    opacity: 0.95,
+                  },
+                }}
+              >
+                  Discord ile Giriş Yap
+              </Button>
               </Stack>
             </Grid>
             <Grid item xs={12} md={6}>
@@ -199,45 +178,45 @@ export default function LandingPage() {
             <Grid item xs={12} md={6}>
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, mb: 2 }}>
                 AutoPanel Bot
-              </Typography>
+            </Typography>
               <Typography variant="body2" color="#b3b3c6">
                 Discord sunucunuzu yönetmek için ihtiyacınız olan her şey.
-              </Typography>
+            </Typography>
             </Grid>
             <Grid item xs={12} md={6}>
               <Stack direction="row" spacing={2} justifyContent="flex-end">
-                <Button
+              <Button
                   variant="outlined"
-                  href={BOT_INVITE_URL}
+                  href={DISCORD_AUTH_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{
+                sx={{
                     borderColor: '#6366f1',
                     color: '#6366f1',
-                    '&:hover': {
+                  '&:hover': {
                       borderColor: '#7c3aed',
                       color: '#7c3aed',
                       bgcolor: 'rgba(99,102,241,0.08)',
-                    },
-                  }}
-                >
-                  Discord'a Ekle
-                </Button>
-                <Button
+                  },
+                }}
+              >
+                Discord'a Ekle
+              </Button>
+              <Button
                   variant="contained"
                   onClick={() => navigate('/login')}
-                  sx={{
+                sx={{
                     background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                    color: '#fff',
-                    '&:hover': {
+                  color: '#fff',
+                  '&:hover': {
                       background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
                       opacity: 0.95,
-                    },
-                  }}
-                >
+                  },
+                }}
+              >
                   Giriş Yap
-                </Button>
-              </Stack>
+              </Button>
+            </Stack>
             </Grid>
           </Grid>
           <Divider sx={{ my: 4, borderColor: '#23232b' }} />

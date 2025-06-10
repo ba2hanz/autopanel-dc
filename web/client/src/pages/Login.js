@@ -65,7 +65,7 @@ export default function Login() {
           if (redirect === 'dashboard') {
             navigate('/dashboard', { replace: true });
           } else {
-            navigate('/', { replace: true });
+          navigate('/', { replace: true });
           }
         } else {
           setError('Token işleme başarısız oldu');
@@ -104,7 +104,7 @@ export default function Login() {
       if (redirect === 'dashboard') {
         navigate('/dashboard', { replace: true });
       } else {
-        navigate('/', { replace: true });
+      navigate('/', { replace: true });
       }
     }
   }, [user, navigate, isProcessing, location.search]);

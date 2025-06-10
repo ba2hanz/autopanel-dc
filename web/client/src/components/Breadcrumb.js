@@ -18,8 +18,7 @@ const routeMap = {
   moderation: 'Otomatik Moderasyon',
   logs: 'Denetim Kaydı',
   autoresponse: 'Otomatik Cevap',
-  emojirole: 'Emoji Rol',
-  other: 'Diğer Ayarlar',
+  reactionrole: 'Tepki Rolleri'
 };
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';

@@ -208,9 +208,9 @@ export default function Dashboard() {
       <Breadcrumb currentPage="Ana Sayfa" />
       
       {/* Hoşgeldiniz Kartı */}
-      <Paper
+            <Paper 
         elevation={0}
-        sx={{
+              sx={{ 
           bgcolor: 'rgba(44,47,51,0.85)',
           borderRadius: 2,
           p: 3,
@@ -220,9 +220,9 @@ export default function Dashboard() {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <Avatar
+              <Avatar
             src={user?.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : '/default-avatar.png'}
-            alt={user?.username}
+                alt={user?.username}
             sx={{ width: 64, height: 64, border: '2px solid #6366f1' }}
           />
           <Box>
@@ -241,7 +241,7 @@ export default function Dashboard() {
         <Grid item xs={12} sm={6} md={3}>
           <Paper
             elevation={0}
-            sx={{
+                sx={{ 
               bgcolor: 'rgba(44,47,51,0.85)',
               borderRadius: 2,
               p: 2,
@@ -268,9 +268,9 @@ export default function Dashboard() {
                   Toplam Sunucu
                 </Typography>
               </Box>
-            </Box>
-          </Paper>
-        </Grid>
+              </Box>
+            </Paper>
+          </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
           <Paper
@@ -291,7 +291,7 @@ export default function Dashboard() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
-              }}>
+            }}>
                 <StarIcon sx={{ color: '#6366f1', fontSize: 24 }} />
               </Box>
               <Box>
@@ -304,7 +304,7 @@ export default function Dashboard() {
               </Box>
             </Box>
           </Paper>
-        </Grid>
+          </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
           <Paper
@@ -325,7 +325,7 @@ export default function Dashboard() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
-              }}>
+            }}>
                 <PeopleIcon sx={{ color: '#6366f1', fontSize: 24 }} />
               </Box>
               <Box>
@@ -338,7 +338,7 @@ export default function Dashboard() {
               </Box>
             </Box>
           </Paper>
-        </Grid>
+          </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
           <Paper
@@ -373,27 +373,27 @@ export default function Dashboard() {
             </Box>
           </Paper>
         </Grid>
-      </Grid>
+          </Grid>
 
       <Typography variant="h3" gutterBottom sx={{ color: '#fff', fontWeight: 800, letterSpacing: '-1px' }}>
         Sunucularım
       </Typography>
       <Typography variant="subtitle1" color="#b3b3c6" sx={{ mb: 3, fontSize: '1.15rem' }}>
         Yönetebileceğiniz Discord sunucularınızı görüntüleyin ve ayarlarını yapın.
-      </Typography>
+              </Typography>
       <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
       <Grid container spacing={3}>
         {servers.map((server) => (
           <Grid item xs={12} sm={6} md={4} key={server.guildId}>
             <Paper
               elevation={0}
-              sx={{
+                      sx={{
                 bgcolor: 'rgba(44,47,51,0.85)',
-                borderRadius: 2,
+                        borderRadius: 2,
                 overflow: 'hidden',
                 border: '1px solid #23232b',
                 transition: 'all 0.2s',
-                '&:hover': {
+                        '&:hover': {
                   transform: 'translateY(-4px)',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
                   border: '1px solid #6366f1'
@@ -478,30 +478,30 @@ export default function Dashboard() {
               <Divider sx={{ borderColor: '#23232b' }} />
 
               <Box sx={{ p: 2 }}>
-                <Button
+                        <Button
                   fullWidth
-                  variant="contained"
-                  startIcon={<SettingsIcon />}
-                  onClick={() => handleSettingsClick(server)}
-                  sx={{
-                    background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                    color: '#fff',
+                          variant="contained"
+                          startIcon={<SettingsIcon />}
+                          onClick={() => handleSettingsClick(server)}
+                          sx={{
+                            background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                            color: '#fff',
                     borderRadius: 2,
                     fontWeight: 600,
                     py: 1,
-                    '&:hover': {
+                            '&:hover': {
                       background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
                       opacity: 0.95,
                     },
-                  }}
-                >
+                          }}
+                        >
                   Ayarları Yönet
-                </Button>
+                        </Button>
               </Box>
             </Paper>
           </Grid>
         ))}
-      </Grid>
+        </Grid>
     </Box>
   );
 } 

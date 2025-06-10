@@ -1,37 +1,71 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const AuthCallback = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { login, user, loading } = useAuth();
 
-export default function AuthCallback() {
-  const { handleCallback } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+    useEffect(() => {
+        const handleCallback = async () => {
+            try {
+                const params = new URLSearchParams(location.search);
+                const code = params.get('code');
 
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const code = searchParams.get('code');
-    const redirect = searchParams.get('redirect');
-    if (code) {
-      fetch(`${API_URL}/api/auth/discord/callback?code=${code}`, { credentials: 'include' })
-        .then(res => res.json())
-        .then(async data => {
-          if (data.token) {
-            await handleCallback(data.token);
-            if (redirect === 'dashboard') {
-              navigate('/dashboard', { replace: true });
-            } else {
-              navigate('/', { replace: true });
+                if (!code) {
+                    console.error('No authorization code found');
+                    throw new Error('Authorization code not found');
+                }
+
+                console.log('Processing callback with code:', code);
+                const loggedInUser = await login(code);
+                console.log('Login successful, user:', loggedInUser);
+
+                if (loggedInUser) {
+                    console.log('Navigating to dashboard...');
+                    navigate('/dashboard', { replace: true });
+                } else {
+                    console.error('Login failed - no user returned');
+                    throw new Error('Login failed - no user returned');
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                navigate('/', { replace: true });
             }
-          } else {
-            navigate('/', { replace: true });
-          }
-        });
-    } else {
-      navigate('/', { replace: true });
-    }
-  }, [handleCallback, navigate, location.search]);
+        };
 
-  return null;
-} 
+        if (!loading && !user) {
+            handleCallback();
+        }
+    }, [location, login, navigate, user, loading]);
+
+    // Eğer user zaten varsa, direkt dashboard'a yönlendir
+    useEffect(() => {
+        if (user && !loading) {
+            console.log('User already exists, navigating to dashboard...');
+            navigate('/dashboard', { replace: true });
+        }
+    }, [user, loading, navigate]);
+
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                bgcolor: '#18181c'
+            }}
+        >
+            <CircularProgress sx={{ color: '#6366f1', mb: 2 }} />
+            <Typography variant="h6" sx={{ color: '#fff' }}>
+                Discord ile giriş yapılıyor...
+            </Typography>
+        </Box>
+    );
+};
+
+export default AuthCallback; 

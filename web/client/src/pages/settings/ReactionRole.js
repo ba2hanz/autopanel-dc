@@ -1,37 +1,38 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import axios from 'axios';
 import {
   Box,
   Typography,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Alert,
-  CircularProgress,
-  Divider,
-  Stack,
   List,
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  IconButton,
+    IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Paper,
-  Grid,
-  Avatar,
-  Tooltip,
-  InputAdornment,
-  Popover
+    TextField,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Grid,
+    Paper,
+    Chip,
+    Alert,
+    Popover,
+    Tab,
+    Tabs,
+    InputAdornment,
+    CircularProgress
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon, EmojiEmotions as EmojiIcon, Close as CloseIcon } from '@mui/icons-material';
-import { toast } from 'react-hot-toast';
-import axios from 'axios';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
+import SearchIcon from '@mui/icons-material/Search';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -40,294 +41,219 @@ export default function ReactionRole() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [channelId, setChannelId] = useState('');
   const [channels, setChannels] = useState([]);
   const [roles, setRoles] = useState([]);
   const [reactionRoles, setReactionRoles] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [openEmojiSelector, setOpenEmojiSelector] = useState(false);
-  const [selectedReactionIndex, setSelectedReactionIndex] = useState(0);
-  const [emojiSearch, setEmojiSearch] = useState('');
-  const [anchorEl, setAnchorEl] = useState(null);
   const [newReactionRole, setNewReactionRole] = useState({
-    channelId: '',
+        channelId: '',
     message: '',
-    reactions: [{ emoji: '', roleId: '' }]
-  });
-  const [emojis, setEmojis] = useState({ defaultEmojis: [], customEmojis: [] });
-  const [loadingEmojis, setLoadingEmojis] = useState(false);
-  const [emojiError, setEmojiError] = useState(null);
+        reactions: []
+    });
+    const [newReaction, setNewReaction] = useState({
+        emoji: '',
+        roleId: ''
+    });
+    const [emojis, setEmojis] = useState({ custom: [], default: [] });
+    const [emojiAnchorEl, setEmojiAnchorEl] = useState(null);
+    const [emojiTab, setEmojiTab] = useState(0);
+    const [emojiSearch, setEmojiSearch] = useState('');
 
   console.log('ReactionRole render');
 
   useEffect(() => {
     console.log('ReactionRole useEffect');
     const fetchData = async () => {
-      setLoading(true);
       try {
-        // Discord verilerini tek bir endpoint'ten al
-        const discordResponse = await fetch(`${API_URL}/api/servers/${guildId}/discord-data`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+            const [channelsRes, rolesRes, reactionRolesRes] = await Promise.all([
+                axios.get(`${process.env.REACT_APP_API_URL}/api/servers/${guildId}/discord-data`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }),
+                axios.get(`${process.env.REACT_APP_API_URL}/api/servers/${guildId}/roles`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }),
+                axios.get(`${process.env.REACT_APP_API_URL}/api/servers/${guildId}/reactionroles`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          })
+        ]);
 
-        if (!discordResponse.ok) {
-          const errorData = await discordResponse.json();
-          throw new Error(errorData.message || 'Discord verileri yüklenemedi');
-        }
+            const channelsData = channelsRes.data.channels || [];
+            const rolesData = rolesRes.data;
+            const reactionRolesData = reactionRolesRes.data;
 
-        const discordData = await discordResponse.json();
-        console.log('Discord Data:', discordData);
-
-        // Tepki rollerini al
-        const reactionRolesResponse = await fetch(`${API_URL}/api/servers/${guildId}/reactionroles`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-
-        if (!reactionRolesResponse.ok) {
-          const errorData = await reactionRolesResponse.json();
-          throw new Error(errorData.message || 'Tepki rolleri yüklenemedi');
-        }
-
-        const reactionRolesData = await reactionRolesResponse.json();
-        console.log('Reaction Roles:', reactionRolesData);
-
-        // Verileri state'e kaydet
-        setChannels(discordData.channels || []);
-        setRoles(discordData.roles || []);
+        setChannels(channelsData);
+        setRoles(rolesData);
         setReactionRoles(reactionRolesData);
-
-        // İlk kanalı seç
-        if (discordData.channels?.length > 0) {
-          setNewReactionRole(prev => ({
-            ...prev,
-            channelId: discordData.channels[0].id
-          }));
-        }
-      } catch (err) {
-        console.error('Veri yükleme hatası:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        } catch (error) {
+            setError('Veriler yüklenirken bir hata oluştu');
       }
     };
 
     fetchData();
   }, [guildId]);
 
-  useEffect(() => {
-    const fetchEmojis = async () => {
-      try {
-        setLoadingEmojis(true);
-        setEmojiError(null);
-        console.log('Emojiler yükleniyor...');
-        
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Token bulunamadı');
-        }
-
-        const url = `${API_URL}/api/servers/${guildId}/emojis`;
-        console.log('Emoji isteği yapılıyor:', {
-          url,
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        const response = await axios.get(url, {
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.data) {
-          throw new Error('API yanıtı boş');
-        }
-
-        console.log('Emojiler yüklendi:', response.data);
-        setEmojis(response.data);
-      } catch (error) {
-        console.error('Emoji yükleme hatası:', {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers
-          }
-        });
-
-        let errorMessage = 'Emojiler yüklenirken bir hata oluştu';
-        if (error.response?.status === 404) {
-          errorMessage = 'Emoji listesi bulunamadı';
-        } else if (error.response?.status === 401) {
-          errorMessage = 'Oturum süresi dolmuş. Lütfen yeniden giriş yapın';
-        } else if (!error.response) {
-          errorMessage = 'Sunucuya bağlanılamadı';
-        }
-
-        setEmojiError(errorMessage);
-      } finally {
-        setLoadingEmojis(false);
-      }
-    };
-
-    if (guildId) {
-      fetchEmojis();
-    }
-  }, [guildId]);
-
   const fetchReactionRoles = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/servers/${guildId}/reactionroles`, {
+            const response = await axios.get(`${API_URL}/api/servers/${guildId}/reactionroles`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      if (!response.ok) throw new Error('Tepki rolleri yüklenemedi');
-      const reactionRolesData = await response.json();
-      setReactionRoles(reactionRolesData);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+            setReactionRoles(response.data);
+        } catch (error) {
+            console.error('Error fetching reaction roles:', error);
+        }
+    };
 
-  const handleCreateReactionRole = async () => {
-    try {
-      console.log('Tepki rolü oluşturuluyor:', {
-        channelId,
-        message: newReactionRole.message,
-        reactions: newReactionRole.reactions
-      });
+    const fetchChannels = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/servers/${guildId}/channels`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            setChannels(response.data);
+        } catch (error) {
+            console.error('Error fetching channels:', error);
+        }
+    };
 
-      // Validasyon
-      if (!channelId) {
-        throw new Error('Lütfen bir kanal seçin');
-      }
-      if (!newReactionRole.message) {
-        throw new Error('Lütfen bir mesaj girin');
-      }
-      if (!newReactionRole.reactions.length) {
-        throw new Error('En az bir tepki ekleyin');
-      }
-      if (newReactionRole.reactions.some(r => !r.emoji || !r.roleId)) {
-        throw new Error('Tüm tepkiler için emoji ve rol seçin');
-      }
-
-      const response = await fetch(`${API_URL}/api/servers/${guildId}/reactionroles`, {
-        method: 'POST',
+    const fetchRoles = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/servers/${guildId}/roles`, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          channelId,
-          message: newReactionRole.message,
-          reactions: newReactionRole.reactions
-        })
-      });
+                }
+            });
+            setRoles(response.data);
+        } catch (error) {
+            console.error('Error fetching roles:', error);
+        }
+    };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Tepki rolü oluşturulamadı');
-      }
+    const handleCreate = async () => {
+        try {
+            const reactionsWithRoleNames = newReactionRole.reactions.map(reaction => {
+                const role = roles.find(r => r.id === reaction.roleId);
+                return {
+                    ...reaction,
+                    roleName: role?.name || 'Bilinmeyen Rol',
+                    // Emoji ID'si varsa (custom emoji) <:name:id> formatında, yoksa direkt emoji
+                    emoji: reaction.emoji.includes(':') 
+                        ? `<${reaction.emoji.includes('a:') ? 'a' : ''}:${reaction.emoji.split(':')[1]}:${reaction.emoji.split(':')[2]}>`
+                        : reaction.emoji
+                };
+            });
 
-      const data = await response.json();
-      console.log('Tepki rolü oluşturuldu:', data);
-      
+            const response = await axios.post(
+                `${process.env.REACT_APP_API_URL}/api/servers/${guildId}/reactionroles`,
+                {
+                    ...newReactionRole,
+                    reactions: reactionsWithRoleNames
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
+            setReactionRoles(prev => [...prev, response.data]);
+            handleClose();
       setSuccess('Tepki rolü başarıyla oluşturuldu!');
-      setOpenDialog(false);
-      setNewReactionRole({ channelId: '', message: '', reactions: [{ emoji: '', roleId: '' }] });
-      fetchReactionRoles();
-    } catch (err) {
-      console.error('Tepki rolü oluşturma hatası:', err);
-      setError(err.message);
-    }
-  };
+        } catch (error) {
+            setError(error.response?.data?.error || 'Tepki rolü oluşturulurken bir hata oluştu');
+        }
+    };
 
-  const handleDeleteReactionRole = async (reactionRoleId) => {
-    try {
-      const response = await fetch(`${API_URL}/api/servers/${guildId}/reactionroles/${reactionRoleId}`, {
-        method: 'DELETE',
+    const handleDelete = async (id) => {
+        try {
+            await axios.delete(`${process.env.REACT_APP_API_URL}/api/servers/${guildId}/reactionroles/${id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
-      if (!response.ok) throw new Error('Tepki rolü silinemedi');
-      
+            setReactionRoles(prev => prev.filter(role => role._id !== id));
       setSuccess('Tepki rolü başarıyla silindi!');
-      fetchReactionRoles();
-    } catch (err) {
-      setError(err.message);
+        } catch (error) {
+            setError(error.response?.data?.error || 'Tepki rolü silinirken bir hata oluştu');
     }
   };
 
   const handleAddReaction = () => {
+        if (newReaction.emoji && newReaction.roleId) {
     setNewReactionRole(prev => ({
       ...prev,
-      reactions: [...prev.reactions, { emoji: '', roleId: '' }]
-    }));
-  };
-
-  const handleReactionChange = (index, field, value) => {
-    setNewReactionRole(prev => ({
-      ...prev,
-      reactions: prev.reactions.map((reaction, i) => 
-        i === index ? { ...reaction, [field]: value } : reaction
-      )
-    }));
-  };
-
-  const handleRemoveReaction = (index) => {
-    setNewReactionRole(prev => ({
-      ...prev,
-      reactions: prev.reactions.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Emoji filtreleme fonksiyonu
-  const filteredEmojis = useMemo(() => {
-    if (!emojiSearch) return emojis;
-    
-    const searchLower = emojiSearch.toLowerCase();
-    return {
-      defaultEmojis: emojis.defaultEmojis.filter(emoji => 
-        emoji.toLowerCase().includes(searchLower)
-      ),
-      customEmojis: emojis.customEmojis.filter(emoji => 
-        emoji.name.toLowerCase().includes(searchLower)
-      )
+                reactions: [...prev.reactions, newReaction]
+            }));
+            setNewReaction({ emoji: '', roleId: '' });
+        }
     };
-  }, [emojiSearch, emojis]);
 
-  const handleEmojiFieldClick = (event, index) => {
-    setSelectedReactionIndex(index);
-    setAnchorEl(event.currentTarget);
-    setOpenEmojiSelector(true);
-    setEmojiSearch('');
-  };
-
-  const handleEmojiSelect = (emoji) => {
-    const newReactions = [...newReactionRole.reactions];
-    newReactions[selectedReactionIndex] = {
-      ...newReactions[selectedReactionIndex],
-      emoji: typeof emoji === 'string' ? emoji : emoji.name
+    const handleRemoveReaction = async (reactionRoleId, emoji) => {
+        try {
+            await axios.delete(`${process.env.REACT_APP_API_URL}/api/servers/${guildId}/reactionroles/${reactionRoleId}/reactions/${emoji}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            setReactionRoles(prev => prev.map(role => {
+                if (role._id === reactionRoleId) {
+                    return {
+                        ...role,
+                        reactions: role.reactions.filter(r => r.emoji !== emoji)
+                    };
+                }
+                return role;
+            }));
+            setSuccess('Tepki başarıyla kaldırıldı!');
+        } catch (error) {
+            setError(error.response?.data?.error || 'Tepki kaldırılırken bir hata oluştu');
+        }
     };
-    setNewReactionRole(prev => ({
-      ...prev,
-      reactions: newReactions
-    }));
-    setOpenEmojiSelector(false);
-    setAnchorEl(null);
+
+    const handleOpen = () => {
+        setOpenDialog(true);
+    };
+
+    const handleClose = () => {
+        setOpenDialog(false);
+        setNewReactionRole({
+            channelId: '',
+            message: '',
+            reactions: []
+        });
+        setNewReaction({
+            emoji: '',
+            roleId: ''
+        });
+    };
+
+    const handleEmojiClick = (event) => {
+        setEmojiAnchorEl(event.currentTarget);
+    };
+
+    const handleEmojiClose = () => {
+        setEmojiAnchorEl(null);
+    };
+
+    const handleEmojiSelect = (emoji) => {
+        setNewReaction(prev => ({ ...prev, emoji }));
+        handleEmojiClose();
+    };
+
+    const filteredEmojis = {
+        custom: emojis.custom.filter(emoji => 
+            emoji.name.toLowerCase().includes(emojiSearch.toLowerCase())
+        ),
+        default: emojis.default.filter(emoji => 
+            emoji.name.toLowerCase().includes(emojiSearch.toLowerCase())
+        )
   };
 
   if (loading) {
@@ -339,385 +265,382 @@ export default function ReactionRole() {
   }
 
   return (
-    <Box sx={{ maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c', p: 3 }}>
-      <Typography variant="h3" gutterBottom sx={{ color: '#fff', fontWeight: 800, letterSpacing: '-1px' }}>
-        Tepki Rolleri
-      </Typography>
-      <Typography variant="subtitle1" color="#b3b3c6" sx={{ mb: 3, fontSize: '1.15rem' }}>
-        Mesajlara tepki vererek rol alınmasını sağlayın.
-      </Typography>
-      <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>Tepki rolü başarıyla oluşturuldu!</Alert>}
-      <Stack spacing={3}>
-        <Box sx={{
-          p: 3,
-          borderRadius: 3,
-          bgcolor: 'rgba(44,47,51,0.85)',
-          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
-          border: '1px solid #23232b',
-          mb: 2,
-          transition: 'box-shadow 0.2s, border 0.2s',
-          '&:hover': {
-            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
-            border: '1.5px solid #6366f1',
-          },
-          position: 'relative',
-        }}>
-          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
-            Yeni Tepki Rolü Oluştur
+        <Box sx={{ maxWidth: '900px', margin: '0 auto', minHeight: '100vh', bgcolor: '#18181c', p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" component="h2">
+                    Tepki Rolleri
           </Typography>
-          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
-            Mesajlara tepki vererek rol alınmasını sağlayan yeni bir sistem oluşturun.
-          </Typography>
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Mesaj Kanalı</InputLabel>
-            <Select
-              value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
-              label="Mesaj Kanalı"
-            >
-              {channels.map((channel) => (
-                <MenuItem key={channel.id} value={channel.id}>
-                  #{channel.name}
-                </MenuItem>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                    onClick={handleOpen}
+                    sx={{
+                        background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                        '&:hover': {
+                            background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                            opacity: 0.9
+                        },
+                        px: 3,
+                        py: 1.2,
+                        borderRadius: 2,
+                        fontWeight: 600,
+                        boxShadow: '0 2px 8px rgba(99,102,241,0.18)'
+                    }}
+                >
+                    Yeni Tepki Rolü
+              </Button>
+            </Box>
+
+            {error && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
+            {success && (
+                <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+                    {success}
+                </Alert>
+            )}
+
+            <List>
+              {reactionRoles.map((reactionRole) => (
+                    <Paper
+                        key={reactionRole._id}
+                        sx={{
+                            mb: 2,
+                            p: 2,
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: 2
+                        }}
+                    >
+                        <ListItem>
+                  <ListItemText
+                                primary={
+                                    <Typography component="div" variant="subtitle1" sx={{ fontWeight: 500, color: '#fff' }}>
+                                        {reactionRole.message}
+                                    </Typography>
+                                }
+                    secondary={
+                      <Box sx={{ mt: 1 }}>
+                                        <Typography component="div" variant="body2" sx={{ color: '#b9bbbe', mb: 1 }}>
+                                            Kanal: {channels.find(c => c.id === reactionRole.channelId)?.name || 'Bilinmeyen Kanal'}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {reactionRole.reactions.map((reaction, index) => (
+                          <Chip
+                            key={index}
+                                                    label={`${reaction.emoji} - ${roles.find(r => r.id === reaction.roleId)?.name || 'Bilinmeyen Rol'}`}
+                                                    onDelete={() => handleRemoveReaction(reactionRole._id, reaction.emoji)}
+                                                    sx={{
+                                                        bgcolor: '#2f3136',
+                                                        color: '#fff',
+                                                        '& .MuiChip-deleteIcon': {
+                                                            color: '#b9bbbe',
+                                                            '&:hover': {
+                                                                color: '#fff'
+                                                            }
+                                                        }
+                                                    }}
+                          />
+                        ))}
+                                        </Box>
+                      </Box>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      edge="end"
+                      aria-label="delete"
+                                    onClick={() => handleDelete(reactionRole._id)}
+                                    sx={{
+                                        color: '#ef4444',
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                                        }
+                                    }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+                    </Paper>
               ))}
-            </Select>
-          </FormControl>
-          <TextField
-            label="Mesaj İçeriği"
-            value={newReactionRole.message}
-            onChange={(e) => setNewReactionRole(prev => ({ ...prev, message: e.target.value }))}
-            fullWidth
-            multiline
-            minRows={3}
-            sx={{ mb: 2 }}
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              variant="contained"
-              sx={{
-                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
-                color: '#fff',
-                borderRadius: 2,
-                fontWeight: 600,
-                px: 3,
-                py: 1.2,
-                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
-                '&:hover': {
-                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
-                  opacity: 0.95,
-                },
-              }}
-              startIcon={<AddIcon />}
-              onClick={() => setOpenDialog(true)}
-              disabled={loading}
-            >
-              {loading ? 'Oluşturuluyor...' : 'Tepki Rolü Oluştur'}
-            </Button>
-          </Box>
-        </Box>
+            </List>
 
-        <Box sx={{
-          p: 3,
-          borderRadius: 3,
-          bgcolor: 'rgba(44,47,51,0.85)',
-          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
-          border: '1px solid #23232b',
-          mb: 2,
-          transition: 'box-shadow 0.2s, border 0.2s',
-          '&:hover': {
-            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
-            border: '1.5px solid #6366f1',
-          },
-        }}>
-          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
-            Mevcut Tepki Rolleri
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
-            Sunucunuzdaki aktif tepki rollerini görüntüleyin ve yönetin.
-          </Typography>
-          <List>
-            {reactionRoles.map((role) => (
-              <ListItem
-                key={role._id}
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.2)',
-                  borderRadius: 1,
-                  mb: 1,
-                  '&:hover': {
-                    bgcolor: 'rgba(0,0,0,0.3)',
-                  },
-                }}
-              >
-                <ListItemText
-                  primary={role.message}
-                  secondary={`Kanal: #${channels.find(c => c.id === role.channelId)?.name || 'Bilinmiyor'}`}
-                />
-                <ListItemSecondaryAction>
-                  <IconButton
-                    edge="end"
-                    aria-label="delete"
-                    onClick={() => handleDeleteReactionRole(role._id)}
-                    sx={{ color: '#ef4444' }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
-          </List>
-        </Box>
-      </Stack>
-
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Yeni Tepki Rolü Oluştur</DialogTitle>
+            <Dialog open={openDialog} onClose={handleClose} maxWidth="md" fullWidth>
+                <DialogTitle>Yeni Tepki Rolü</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Kanal"
-              select
-              value={newReactionRole.channelId || ''}
-              onChange={(e) => setNewReactionRole(prev => ({ ...prev, channelId: e.target.value }))}
-              sx={{ mb: 2 }}
-            >
-              {channels.map(channel => (
-                <MenuItem key={channel.id} value={channel.id}>
-                  #{channel.name}
-                </MenuItem>
-              ))}
-            </TextField>
-
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12}>
+                            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                                Kanal
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                {channels.map((channel) => (
+                                    <Chip
+                                        key={channel.id}
+                                        label={`#${channel.name}`}
+                                        onClick={() => setNewReactionRole(prev => ({ ...prev, channelId: channel.id }))}
+                                        color={newReactionRole.channelId === channel.id ? 'primary' : 'default'}
+                                        sx={{
+                                            background: newReactionRole.channelId === channel.id 
+                                                ? 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)'
+                                                : 'rgba(255, 255, 255, 0.05)',
+                                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                                            color: newReactionRole.channelId === channel.id ? '#fff' : '#6366f1',
+                                            '&:hover': {
+                                                background: newReactionRole.channelId === channel.id
+                                                    ? 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)'
+                                                    : 'rgba(99, 102, 241, 0.1)'
+                                            }
+                                        }}
+                                    />
+                                ))}
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12}>
             <TextField
               fullWidth
               label="Mesaj"
-              multiline
-              rows={4}
+                                multiline
+                                rows={4}
               value={newReactionRole.message}
               onChange={(e) => setNewReactionRole(prev => ({ ...prev, message: e.target.value }))}
-              sx={{ mb: 2 }}
-            />
-
-            {newReactionRole.reactions.map((reaction, index) => (
-              <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                                Tepkiler
+            </Typography>
+                            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <TextField
-                  fullWidth
                   label="Emoji"
-                  value={reaction.emoji}
-                  onClick={(e) => handleEmojiFieldClick(e, index)}
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        {reaction.emoji}
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <TextField
-                  fullWidth
-                  label="Rol"
-                  select
-                  value={reaction.roleId}
-                  onChange={(e) => {
-                    const newReactions = [...newReactionRole.reactions];
-                    newReactions[index] = {
-                      ...newReactions[index],
-                      roleId: e.target.value
-                    };
-                    setNewReactionRole(prev => ({
-                      ...prev,
-                      reactions: newReactions
-                    }));
-                  }}
-                >
-                  {roles.map(role => (
-                    <MenuItem key={role.id} value={role.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box
-                          sx={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: '50%',
-                            bgcolor: role.color ? `#${role.color.toString(16)}` : 'grey.500'
-                          }}
-                        />
+                                    value={newReaction.emoji}
+                                    onClick={handleEmojiClick}
+                                    InputProps={{
+                                        readOnly: true,
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <EmojiEmotionsIcon sx={{ cursor: 'pointer' }} />
+                                            </InputAdornment>
+                                        )
+                                    }}
+                                    sx={{ minWidth: 200 }}
+                                />
+                                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>Rol</InputLabel>
+                  <Select
+                                        value={newReaction.roleId}
+                                        onChange={(e) => setNewReaction(prev => ({ ...prev, roleId: e.target.value }))}
+                    label="Rol"
+                  >
+                    {roles.map((role) => (
+                      <MenuItem key={role.id} value={role.id}>
                         {role.name}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <IconButton
-                  onClick={() => {
-                    const newReactions = newReactionRole.reactions.filter((_, i) => i !== index);
-                    setNewReactionRole(prev => ({
-                      ...prev,
-                      reactions: newReactions
-                    }));
-                  }}
-                  disabled={newReactionRole.reactions.length === 1}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Box>
-            ))}
-
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
             <Button
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setNewReactionRole(prev => ({
-                  ...prev,
-                  reactions: [...prev.reactions, { emoji: '', roleId: '' }]
-                }));
-              }}
-              sx={{ mt: 1 }}
-            >
-              Tepki Ekle
+                                    variant="contained"
+              onClick={handleAddReaction}
+                                    disabled={!newReaction.emoji || !newReaction.roleId}
+                                    sx={{
+                                        background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                                        '&:hover': {
+                                            background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                                            opacity: 0.9
+                                        }
+                                    }}
+                                >
+                                    Ekle
             </Button>
           </Box>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                {newReactionRole.reactions.map((reaction, index) => (
+                                    <Chip
+                                        key={index}
+                                        label={`${reaction.emoji} → ${roles.find(r => r.id === reaction.roleId)?.name || 'Bilinmeyen Rol'}`}
+                                        onDelete={() => {
+                                            setNewReactionRole(prev => ({
+                                                ...prev,
+                                                reactions: prev.reactions.filter((_, i) => i !== index)
+                                            }));
+                                        }}
+                                        sx={{
+                                            background: 'rgba(99, 102, 241, 0.1)',
+                                            border: '1px solid rgba(99, 102, 241, 0.2)',
+                                            color: '#6366f1'
+                                        }}
+                                    />
+                                ))}
+                            </Box>
+                        </Grid>
+                    </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>İptal</Button>
-          <Button 
-            onClick={handleCreateReactionRole} 
-            variant="contained" 
-            color="primary"
-            disabled={!newReactionRole.channelId || !newReactionRole.message || newReactionRole.reactions.some(r => !r.emoji || !r.roleId)}
+                    <Button onClick={handleClose}>İptal</Button>
+          <Button
+                        onClick={handleCreate}
+            variant="contained"
+                        disabled={!newReactionRole.channelId || !newReactionRole.message || newReactionRole.reactions.length === 0}
+                        sx={{
+                            background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                            '&:hover': {
+                                background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                                opacity: 0.9
+                            }
+                        }}
           >
             Oluştur
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Popover
-        open={openEmojiSelector}
-        anchorEl={anchorEl}
-        onClose={() => {
-          setOpenEmojiSelector(false);
-          setAnchorEl(null);
-        }}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        PaperProps={{
-          sx: {
-            width: 400,
-            maxHeight: 400,
-            p: 2
-          }
-        }}
-      >
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Emoji ara..."
-          value={emojiSearch}
-          onChange={(e) => setEmojiSearch(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-        
-        {loadingEmojis ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : emojiError ? (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {emojiError}
-          </Alert>
-        ) : (
-          <Box>
-            {filteredEmojis.defaultEmojis.length > 0 && (
-              <>
-                <Typography variant="subtitle2" gutterBottom>
-                  Varsayılan Emojiler
-                </Typography>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: 1, 
-                  mb: 2,
-                  maxHeight: '150px',
-                  overflowY: 'auto',
-                  p: 1,
-                  bgcolor: 'background.paper',
-                  borderRadius: 1
-                }}>
-                  {filteredEmojis.defaultEmojis.map((emoji, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => handleEmojiSelect(emoji)}
-                      sx={{
-                        minWidth: '40px',
-                        width: '40px',
-                        height: '40px',
-                        p: 0,
-                        fontSize: '1.5rem',
-                        '&:hover': {
-                          bgcolor: 'action.hover'
+            <Popover
+                open={Boolean(emojiAnchorEl)}
+                anchorEl={emojiAnchorEl}
+                onClose={handleEmojiClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+                PaperProps={{
+                    sx: {
+                        width: 352,
+                        maxHeight: 435,
+                        bgcolor: '#36393f',
+                        color: '#fff',
+                        borderRadius: '4px',
+                        boxShadow: '0 0 0 1px rgba(4,4,5,0.15), 0 2px 10px 0 rgba(0,0,0,0.2)',
+                        '& .MuiTab-root': {
+                            color: '#b9bbbe',
+                            textTransform: 'none',
+                            minWidth: 0,
+                            padding: '0 16px',
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            '&.Mui-selected': {
+                                color: '#fff'
+                            }
                         }
-                      }}
+                    }
+                }}
+            >
+                <Box sx={{ p: 1 }}>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="Emoji ara..."
+                        value={emojiSearch}
+                        onChange={(e) => setEmojiSearch(e.target.value)}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon sx={{ color: '#b9bbbe', fontSize: '20px' }} />
+                                </InputAdornment>
+                            )
+                        }}
+                        sx={{
+                            mb: 1,
+                            '& .MuiOutlinedInput-root': {
+                                color: '#dcddde',
+                                bgcolor: '#202225',
+                                borderRadius: '4px',
+                                '& fieldset': {
+                                    borderColor: 'transparent'
+                                },
+                                '&:hover fieldset': {
+                                    borderColor: 'transparent'
+                                },
+                                '&.Mui-focused fieldset': {
+                                    borderColor: '#5865f2'
+                                }
+                            },
+                            '& .MuiInputBase-input': {
+                                padding: '8px 8px 8px 0',
+                                fontSize: '14px'
+                            }
+                        }}
+                    />
+                    <Tabs
+                        value={emojiTab}
+                        onChange={(e, newValue) => setEmojiTab(newValue)}
+                        sx={{
+                            minHeight: '36px',
+                            borderBottom: 1,
+                            borderColor: '#2f3136',
+                            mb: 1,
+                            '& .MuiTabs-indicator': {
+                                backgroundColor: '#5865f2',
+                                height: '2px'
+                            }
+                        }}
                     >
-                      {emoji}
-                    </Button>
-                  ))}
-                </Box>
-              </>
-            )}
-
-            {filteredEmojis.customEmojis.length > 0 && (
-              <>
-                <Typography variant="subtitle2" gutterBottom>
-                  Sunucu Emojileri
-                </Typography>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: 1,
-                  maxHeight: '150px',
-                  overflowY: 'auto',
-                  p: 1,
-                  bgcolor: 'background.paper',
-                  borderRadius: 1
-                }}>
-                  {filteredEmojis.customEmojis.map((emoji) => (
-                    <Button
-                      key={emoji.id}
-                      onClick={() => handleEmojiSelect(emoji)}
-                      sx={{
-                        minWidth: '40px',
-                        width: '40px',
-                        height: '40px',
-                        p: 0,
-                        '&:hover': {
-                          bgcolor: 'action.hover'
+                        <Tab label="Varsayılan Emojiler" />
+                    </Tabs>
+                    <Box sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(8, 1fr)',
+                        gap: '4px',
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        p: '4px',
+                        '&::-webkit-scrollbar': {
+                            width: '8px'
+                        },
+                        '&::-webkit-scrollbar-track': {
+                            background: 'transparent'
+                        },
+                        '&::-webkit-scrollbar-thumb': {
+                            background: '#202225',
+                            borderRadius: '4px',
+                            '&:hover': {
+                                background: '#2f3136'
+                            }
                         }
-                      }}
-                    >
-                      <img
-                        src={emoji.url}
-                        alt={emoji.name}
-                        style={{ width: '24px', height: '24px' }}
-                      />
-                    </Button>
-                  ))}
+                    }}>
+                        {filteredEmojis.default.map((emoji) => (
+                            <Box
+                                key={emoji.name}
+                                onClick={() => handleEmojiSelect(emoji.url)}
+                                sx={{
+                                    width: 40,
+                                    height: 40,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    borderRadius: '4px',
+                                    fontSize: '24px',
+                                    transition: 'background-color 0.1s ease',
+                                    '&:hover': {
+                                        bgcolor: '#2f3136'
+                                    }
+                                }}
+                            >
+                                {emoji.url}
+                            </Box>
+                        ))}
+                    </Box>
+                    {emojiSearch && filteredEmojis.custom.length === 0 && filteredEmojis.default.length === 0 && (
+                        <Box sx={{ 
+                            p: 2, 
+                            textAlign: 'center',
+                            color: '#b9bbbe',
+                            fontSize: '14px'
+                        }}>
+                            Emoji bulunamadı
+                        </Box>
+                    )}
                 </Box>
-              </>
-            )}
-
-            {filteredEmojis.defaultEmojis.length === 0 && filteredEmojis.customEmojis.length === 0 && (
-              <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
-                Emoji bulunamadı
-              </Typography>
-            )}
-          </Box>
-        )}
-      </Popover>
+            </Popover>
     </Box>
   );
 } 

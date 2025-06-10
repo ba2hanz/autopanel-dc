@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   AppBar,
@@ -19,7 +19,9 @@ import {
   useMediaQuery,
   Container,
   Tooltip,
-  Divider
+  Divider,
+  ListItemButton,
+  Button
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -27,7 +29,9 @@ import {
   Settings as SettingsIcon,
   ExitToApp as LogoutIcon,
   Person as PersonIcon,
-  Apps as LogoIcon
+  Apps as LogoIcon,
+  Home,
+  Logout
 } from '@mui/icons-material';
 import Breadcrumb from './Breadcrumb';
 import autopanelLogo from '../assets/autopanel-logo.png';
@@ -35,9 +39,8 @@ import autopanelLogo from '../assets/autopanel-logo.png';
 const drawerWidth = 240;
 
 export default function Navigation() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -59,15 +62,14 @@ export default function Navigation() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/');
     } catch (error) {
-      console.error('Çıkış hatası:', error);
+      console.error('Logout error:', error);
     }
   };
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Profil', icon: <PersonIcon />, path: '/profile' }
+    { text: 'Ayarlar', icon: <SettingsIcon />, path: '/settings' }
   ];
 
   const drawer = (
@@ -86,20 +88,28 @@ export default function Navigation() {
       <Divider sx={{ mx: 0, my: 0, width: '100%', borderColor: '#23232b' }} />
       <List>
         {menuItems.map((item) => (
-          <ListItem
-            button
-            key={item.text}
-            onClick={() => {
-              navigate(item.path);
-              setMobileOpen(false);
-            }}
-            selected={location.pathname === item.path}
-          >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton
+              selected={location.pathname === item.path}
+              onClick={() => window.location.href = item.path}
+            >
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
           </ListItem>
         ))}
       </List>
+      <Box sx={{ position: 'absolute', bottom: 0, width: '100%', p: 2 }}>
+        <Button
+          fullWidth
+          variant="outlined"
+          color="error"
+          startIcon={<LogoutIcon />}
+          onClick={handleLogout}
+        >
+          Çıkış Yap
+        </Button>
+      </Box>
     </Box>
   );
 
@@ -120,7 +130,7 @@ export default function Navigation() {
             <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
               <Breadcrumb compact sx={{ color: '#fff', pl: 0, fontSize: '1.25rem' }} />
             </Box>
-          </Toolbar>
+        </Toolbar>
         </Container>
       </AppBar>
 

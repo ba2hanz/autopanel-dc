@@ -17,6 +17,8 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import TagFacesIcon from '@mui/icons-material/TagFaces';
 import PollIcon from '@mui/icons-material/Poll';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
+import WavingHandIcon from '@mui/icons-material/WavingHand';
+import HistoryIcon from '@mui/icons-material/History';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -24,22 +26,22 @@ const settingsOptions = [
   {
     key: 'welcome',
     title: 'Karşılama & Veda',
-    description: 'Bir üye katıldığında veya ayrıldığında olacakları yönetin',
-    icon: <EmojiEventsIcon fontSize="large" color="primary" />,
+    description: 'Sunucunuza katılan ve ayrılan üyelere özel mesajlar gönderin',
+    icon: <WavingHandIcon fontSize="large" color="primary" />,
     path: 'welcome',
   },
   {
     key: 'moderation',
     title: 'Otomatik Moderasyon',
-    description: 'Sunucu moderasyonunu otomatikleştirir',
+    description: 'Sunucunuzu otomatik olarak moderatörler',
     icon: <SecurityIcon fontSize="large" color="primary" />,
     path: 'moderation',
   },
   {
     key: 'logs',
     title: 'Denetim Kaydı',
-    description: 'Sunucunuzda olanların kaydını tutar',
-    icon: <ListAltIcon fontSize="large" color="primary" />,
+    description: 'Sunucunuzdaki önemli olayları takip edin',
+    icon: <HistoryIcon fontSize="large" color="primary" />,
     path: 'logs',
   },
   {
@@ -62,21 +64,7 @@ const settingsOptions = [
     description: 'Mesajlara tepki vererek rol alınmasını sağlayın',
     icon: <HowToVoteIcon fontSize="large" color="primary" />,
     path: 'reactionrole',
-  },
-  {
-    key: 'emojirole',
-    title: 'Emoji Rol',
-    description: 'Üyelerin mesajlara tepki vererek rol almasını sağlar',
-    icon: <TagFacesIcon fontSize="large" color="primary" />,
-    path: 'emojirole',
-  },
-  {
-    key: 'other',
-    title: 'Diğer Ayarlar',
-    description: 'Sunucunuzun diğer ayarlarını yönetin',
-    icon: <AutoFixHighIcon fontSize="large" color="primary" />,
-    path: 'other',
-  },
+  }
 ];
 
 export default function ServerSettings() {

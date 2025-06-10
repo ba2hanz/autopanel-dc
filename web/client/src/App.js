@@ -4,7 +4,6 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
-import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -20,6 +19,8 @@ import LandingPage from './pages/LandingPage';
 import AuthCallback from './pages/AuthCallback';
 import Profile from './pages/Profile';
 import { Toaster } from 'react-hot-toast';
+import { Box, CircularProgress } from '@mui/material';
+import { useAuth } from './contexts/AuthContext';
 
 // Discord benzeri koyu tema
 const theme = createTheme({
@@ -59,14 +60,23 @@ const theme = createTheme({
   },
 });
 
-// Korumalı route bileşeni
-function ProtectedRoute({ children }) {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    return <Navigate to="/login" />;
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
-}
+};
 
 function App() {
   return (
@@ -77,18 +87,9 @@ function App() {
           <Router>
             <Toaster position="top-right" />
             <Routes>
-              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/" element={<LandingPage />} />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Layout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Profile />} />
-              </Route>
+              <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route
                 path="/dashboard"
                 element={
@@ -107,7 +108,17 @@ function App() {
                 <Route path="server/:guildId/settings/reactionrole" element={<ReactionRole />} />
                 <Route path="server/:guildId/upgrade" element={<Upgrade />} />
               </Route>
-              <Route path="*" element={<Navigate to="/" />} />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Profile />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Router>
         </WebSocketProvider>

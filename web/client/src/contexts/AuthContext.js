@@ -8,20 +8,19 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const AuthContext = createContext(null);
 
 // Hook'u tanımlayalım
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Token kontrolü
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -30,68 +29,84 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      console.log('Token kontrol ediliyor...');
+      console.log('Checking auth with token:', token);
       const response = await axios.get(`${API_URL}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
-      
+
+      console.log('Auth check response:', response.data);
       if (response.data) {
-        console.log('Kullanıcı bilgileri alındı:', response.data);
         setUser(response.data);
-      } else {
-        console.log('Kullanıcı bulunamadı, token siliniyor');
-        localStorage.removeItem('token');
-        setUser(null);
       }
-    } catch (err) {
-      console.error('Token kontrol hatası:', err);
+    } catch (error) {
+      console.error('Auth check error:', error);
       localStorage.removeItem('token');
       setUser(null);
-      setError(err.response?.data?.message || 'Kimlik doğrulama hatası');
     } finally {
       setLoading(false);
     }
   };
 
-  // İlk yüklemede token kontrolü
   useEffect(() => {
     checkAuth();
   }, []);
 
-  // Callback işlemi
-  const handleCallback = async (token) => {
+  const login = async (code) => {
     try {
       setLoading(true);
-      setError(null);
-
-      if (!token) {
-        throw new Error('Token bulunamadı');
+      console.log('Attempting login with code:', code);
+      
+      const response = await axios.post(`${API_URL}/api/auth/discord/callback`, { code });
+      console.log('Login response:', response.data);
+      
+      if (!response.data || !response.data.token) {
+        throw new Error('No token in response');
       }
 
-      console.log('Token kaydediliyor...');
+      const { token, user } = response.data;
+      console.log('Setting token and user:', { token, user });
+      
+      // Önce token'ı kaydet
       localStorage.setItem('token', token);
       
-      console.log('Kullanıcı bilgileri alınıyor...');
-      await checkAuth();
+      // Sonra user'ı set et
+      setUser(user);
       
-      return true;
-    } catch (err) {
-      console.error('Callback hatası:', err);
-      setError(err.response?.data?.message || 'Kimlik doğrulama başarısız oldu. Lütfen tekrar deneyin.');
+      // Axios için default header'ı ayarla
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      return user;
+    } catch (error) {
+      console.error('Login error:', error);
       localStorage.removeItem('token');
       setUser(null);
-      return false;
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  // Çıkış işlemi
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    setError(null);
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await axios.post(`${API_URL}/api/auth/logout`, {}, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
+      setUser(null);
+      setError(null);
+      window.location.href = '/';
+    }
   };
 
   // Context değerini oluşturalım
@@ -99,8 +114,7 @@ export function AuthProvider({ children }) {
     user,
     loading,
     error,
-    isAuthenticated: !!user,
-    handleCallback,
+    login,
     logout
   };
 
