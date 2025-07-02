@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 require('dotenv').config();
+const { isModerator } = require('../utils/permissions');
 
 // Store log channels for each guild
 const logChannels = new Map();
@@ -30,8 +31,7 @@ module.exports = {
 
         try {
             // Check permissions
-            if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+            if (!(await isModerator(interaction))) {
                 return interaction.editReply('You need to be an administrator or moderator to use this command!');
             }
 

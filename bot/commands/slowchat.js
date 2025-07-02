@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { sendLog } = require('./logchannel');
+const { isModerator } = require('../utils/permissions');
 require('dotenv').config();
 
 module.exports = {
@@ -18,8 +19,7 @@ module.exports = {
 
         try {
             // Yetki kontrolü
-            if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+            if (!(await isModerator(interaction))) {
                 return interaction.editReply('You need to be an administrator or moderator to use this command!');
             }
 

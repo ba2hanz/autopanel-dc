@@ -8,7 +8,7 @@ const auth = require('../middleware/auth');
 // Discord OAuth2 configuration
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI;
+const DISCORD_REDIRECT_URI = 'http://localhost:3000/auth/callback';
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Debug middleware for auth routes
@@ -295,7 +295,16 @@ async function handleDiscordCallback(code, res) {
 
         // Return token as JSON
         console.log('\n📤 Yanıt Gönderiliyor...');
-        res.json({ token });
+        res.json({ 
+            token,
+            user: {
+                id: user._id,
+                discordId: user.discordId,
+                username: user.username,
+                avatar: user.avatar,
+                servers: user.servers
+            }
+        });
         console.log('✅ İşlem Tamamlandı!\n');
 
     } catch (error) {
@@ -311,5 +320,16 @@ async function handleDiscordCallback(code, res) {
         });
     }
 }
+
+router.post('/logout', auth, async (req, res) => {
+    try {
+        // Token'ı blacklist'e ekle veya geçersiz kıl
+        // Bu örnekte sadece başarılı yanıt dönüyoruz
+        res.json({ message: 'Başarıyla çıkış yapıldı' });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ error: 'Çıkış yapılırken bir hata oluştu' });
+    }
+});
 
 module.exports = router; 

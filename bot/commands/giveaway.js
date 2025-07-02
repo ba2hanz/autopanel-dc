@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { sendLog } = require('./logchannel');
+const { isModerator } = require('../utils/permissions');
 require('dotenv').config();
 
 // Store active giveaways and history
@@ -122,8 +123,7 @@ module.exports = {
 
     async handleCreate(interaction) {
         // Check permissions
-        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+        if (!(await isModerator(interaction))) {
             return interaction.editReply('You need to be an administrator or moderator to use this command!');
         }
 
@@ -217,8 +217,7 @@ module.exports = {
 
     async handleCancel(interaction) {
         // Check permissions
-        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+        if (!(await isModerator(interaction))) {
             return interaction.editReply('You need to be an administrator or moderator to use this command!');
         }
 
@@ -230,9 +229,7 @@ module.exports = {
         }
 
         // Check if user is host or has admin/mod role
-        if (giveaway.hostId !== interaction.user.id && 
-            !interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+        if (giveaway.hostId !== interaction.user.id && !(await isModerator(interaction))) {
             return interaction.editReply('You can only cancel your own giveaways unless you are an administrator or moderator!');
         }
 
@@ -259,8 +256,7 @@ module.exports = {
 
     async handleFinish(interaction) {
         // Check permissions
-        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+        if (!(await isModerator(interaction))) {
             return interaction.editReply('You need to be an administrator or moderator to use this command!');
         }
 
@@ -272,9 +268,7 @@ module.exports = {
         }
 
         // Check if user is host or has admin/mod role
-        if (giveaway.hostId !== interaction.user.id && 
-            !interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+        if (giveaway.hostId !== interaction.user.id && !(await isModerator(interaction))) {
             return interaction.editReply('You can only end your own giveaways unless you are an administrator or moderator!');
         }
 
@@ -284,8 +278,7 @@ module.exports = {
 
     async handleHistory(interaction) {
         // Check permissions
-        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-            !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+        if (!(await isModerator(interaction))) {
             return interaction.editReply('You need to be an administrator or moderator to use this command!');
         }
 

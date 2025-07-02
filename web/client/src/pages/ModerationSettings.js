@@ -86,6 +86,9 @@ export default function ModerationSettings() {
   const [discordData, setDiscordData] = useState({ channels: [], roles: [] });
   const [server, setServer] = useState(null);
   const [newWord, setNewWord] = useState('');
+  const [moderatorRoles, setModeratorRoles] = useState([]);
+  const [selectedModeratorRole, setSelectedModeratorRole] = useState('');
+  const [savingModeratorRoles, setSavingModeratorRoles] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -143,6 +146,23 @@ export default function ModerationSettings() {
         if (!discordResponse.ok) throw new Error('Discord verileri yüklenemedi');
         const discordData = await discordResponse.json();
         setDiscordData(discordData);
+        // Moderatör rolleri backend'den çek
+        const fetchModeratorRoles = async () => {
+          try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_URL}/api/servers/${guildId}/moderator-roles`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              setModeratorRoles(data.roles || []);
+            }
+          } catch (err) {
+            // Hata durumunda boş bırak
+            setModeratorRoles([]);
+          }
+        };
+        fetchModeratorRoles();
       } catch (err) {
         setError(err.message);
       } finally {
@@ -320,6 +340,39 @@ export default function ModerationSettings() {
     }));
   };
 
+  const handleAddModeratorRole = () => {
+    if (!selectedModeratorRole || moderatorRoles.includes(selectedModeratorRole)) return;
+    // Mock: API'ye ekleme isteği atılacak
+    setModeratorRoles([...moderatorRoles, selectedModeratorRole]);
+    setSelectedModeratorRole('');
+  };
+
+  const handleRemoveModeratorRole = (roleId) => {
+    // Mock: API'den silme isteği atılacak
+    setModeratorRoles(moderatorRoles.filter(r => r !== roleId));
+  };
+
+  const handleModeratorRolesSave = async () => {
+    try {
+      setSavingModeratorRoles(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/servers/${guildId}/moderator-roles`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ roles: moderatorRoles })
+      });
+      if (!res.ok) throw new Error('Kayıt başarısız');
+      toast.success('Moderatör rolleri kaydedildi!');
+    } catch (error) {
+      toast.error('Moderatör rolleri kaydedilemedi!');
+    } finally {
+      setSavingModeratorRoles(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -338,6 +391,88 @@ export default function ModerationSettings() {
       </Typography>
       <Divider sx={{ mb: 3, borderColor: '#23232b' }} />
       <Stack spacing={4}>
+        {/* Moderatör Rolleri Bölümü */}
+        <Box sx={{
+          p: 3,
+          borderRadius: 3,
+          bgcolor: 'rgba(44,47,51,0.85)',
+          boxShadow: '0 4px 24px 0 rgba(99,102,241,0.18)',
+          border: '1px solid #23232b',
+          mb: 2,
+          transition: 'box-shadow 0.2s, border 0.2s',
+          '&:hover': {
+            boxShadow: '0 8px 32px 0 rgba(99,102,241,0.18)',
+            border: '1.5px solid #6366f1',
+          },
+          position: 'relative',
+        }}>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }} gutterBottom>
+            Moderatör Rolleri
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#b3b3c6', mb: 2 }}>
+            Bu rollere sahip kullanıcılar moderatör yetkisiyle bot komutlarını kullanabilir.
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Rol Seç</InputLabel>
+              <Select
+                value={selectedModeratorRole}
+                onChange={e => {
+                  const value = e.target.value;
+                  if (value && !moderatorRoles.includes(value)) {
+                    setModeratorRoles([...moderatorRoles, value]);
+                  }
+                  setSelectedModeratorRole(''); // Seçimden sonra sıfırla
+                }}
+                input={<OutlinedInput label="Rol Seç" />}
+              >
+                {discordData.roles.map(role => (
+                  <MenuItem key={role.id} value={role.id} disabled={moderatorRoles.includes(role.id)}>
+                    {role.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {moderatorRoles.length === 0 && <Typography color="text.secondary">Henüz moderatör rolü eklenmedi.</Typography>}
+            {moderatorRoles.map(roleId => {
+              const role = discordData.roles.find(r => r.id === roleId);
+              return (
+                <Chip
+                  key={roleId}
+                  label={role ? `@${role.name}` : roleId}
+                  onDelete={() => handleRemoveModeratorRole(roleId)}
+                  sx={{ bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#fff', border: '1px solid rgba(99, 102, 241, 0.2)' }}
+                />
+              );
+            })}
+          </Box>
+          {/* Moderatör Rolleri Kaydet Butonu */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+            <Button
+              variant="contained"
+              onClick={handleModeratorRolesSave}
+              disabled={savingModeratorRoles}
+              startIcon={<SaveIcon />}
+              sx={{
+                background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+                color: '#fff',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+                  opacity: 0.95,
+                },
+              }}
+            >
+              {savingModeratorRoles ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </Box>
+        </Box>
         {/* Link/Davet Filtresi */}
         <Box sx={{
           p: 3,
@@ -1266,6 +1401,30 @@ export default function ModerationSettings() {
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mt: 2 }}>Ayarlar başarıyla kaydedildi!</Alert>}
       </Stack>
+      {/* Kaydet Butonu */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={saving}
+          startIcon={<SaveIcon />}
+          sx={{
+            background: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
+            color: '#fff',
+            borderRadius: 2,
+            fontWeight: 600,
+            px: 3,
+            py: 1.2,
+            boxShadow: '0 2px 8px rgba(99,102,241,0.18)',
+            '&:hover': {
+              background: 'linear-gradient(90deg, #7c3aed 0%, #6366f1 100%)',
+              opacity: 0.95,
+            },
+          }}
+        >
+          {saving ? 'Kaydediliyor...' : 'Kaydet'}
+        </Button>
+      </Box>
     </Box>
   );
 } 

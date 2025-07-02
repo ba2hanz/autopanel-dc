@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { sendLog } = require('./logchannel');
 const { userPanels, FREE_FEATURES } = require('./panel');
+const { isModerator } = require('../utils/permissions');
 require('dotenv').config();
 
 // Store active word watches
@@ -28,8 +29,7 @@ module.exports = {
 
         try {
             // Check permissions
-            if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && 
-                !interaction.member.roles.cache.has(process.env.MODERATOR_ROLE_ID)) {
+            if (!(await isModerator(interaction))) {
                 return interaction.editReply('You need to be an administrator or moderator to use this command!');
             }
 

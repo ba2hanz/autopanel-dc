@@ -35,8 +35,6 @@ const reactionRoleSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     }
-}, {
-    timestamps: true
 });
 
 // Create compound index for guildId and messageId

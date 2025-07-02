@@ -537,19 +537,16 @@ router.get('/:guildId/discord-data', auth, async (req, res) => {
         console.log('Kanal sayısı:', textChannels.length);
         console.log('Rol sayısı:', roles.length);
 
-        // Kanal ve rol verilerini ayrı ayrı döndür
         res.json({
             channels: textChannels.map(channel => ({
                 id: channel.id,
                 name: channel.name,
-                type: channel.type,
-                position: channel.position
+                type: channel.type
             })),
             roles: roles.map(role => ({
                 id: role.id,
                 name: role.name,
-                color: role.color,
-                position: role.position
+                color: role.color
             }))
         });
     } catch (error) {
@@ -638,96 +635,76 @@ router.get('/:guildId/channels', auth, async (req, res) => {
 // Get server roles
 router.get('/:guildId/roles', auth, async (req, res) => {
     try {
-        console.log('\n=== Roller İsteniyor ===');
-        console.log('Guild ID:', req.params.guildId);
-        
-        // Gerekli environment variable'ları kontrol et
         const botToken = process.env.DISCORD_BOT_TOKEN;
         const clientId = process.env.DISCORD_CLIENT_ID;
-        
-        if (!botToken) {
-            console.error('DISCORD_BOT_TOKEN bulunamadı!');
-            return res.status(500).json({ message: 'Bot token yapılandırması eksik' });
-        }
-        
-        if (!clientId) {
-            console.error('DISCORD_CLIENT_ID bulunamadı!');
-            return res.status(500).json({ message: 'Client ID yapılandırması eksik' });
-        }
-
         const guildId = req.params.guildId;
 
-        // Önce sunucu bilgilerini kontrol et
-        const server = await Server.findOne({ guildId });
-        if (!server) {
-            console.error('Sunucu bulunamadı:', guildId);
-            return res.status(404).json({ message: 'Sunucu bulunamadı' });
+        if (!botToken) {
+            console.error('DISCORD_BOT_TOKEN is not defined');
+            return res.status(500).json({ error: 'Bot token is not configured' });
         }
 
-        console.log('Discord API istekleri yapılıyor...');
-        
-        // Rolleri getir
+        if (!clientId) {
+            console.error('DISCORD_CLIENT_ID is not defined');
+            return res.status(500).json({ error: 'Client ID is not configured' });
+        }
+
+        console.log('Fetching roles for guild:', guildId);
+        console.log('Using bot token:', botToken ? 'Token exists' : 'Token missing');
+        console.log('Using client ID:', clientId);
+
         const response = await axios.get(`${DISCORD_API_URL}/guilds/${guildId}/roles`, {
             headers: {
                 'Authorization': `Bot ${botToken}`
             }
-        }).catch(error => {
-            console.error('Roller getirme hatası:', error.response?.data || error.message);
-            throw error;
         });
 
-        // Botun rollerini getir
+        console.log('Bot roles response:', response.data);
+
+        // @everyone rolünü filtrele ve botun rolünden daha yüksek rolleri filtrele
         const botResponse = await axios.get(`${DISCORD_API_URL}/guilds/${guildId}/members/${clientId}`, {
             headers: {
                 'Authorization': `Bot ${botToken}`
             }
-        }).catch(error => {
-            console.error('Bot rolleri getirme hatası:', error.response?.data || error.message);
-            throw error;
         });
 
-        console.log('API yanıtları alındı, işleniyor...');
+        console.log('Bot member response:', botResponse.data);
 
-        // Botun en yüksek rolünü bul
         const botHighestRole = Math.max(...botResponse.data.roles.map(roleId => {
             const role = response.data.find(r => r.id === roleId);
             return role ? role.position : 0;
         }));
 
-        // Rolleri filtrele ve sırala
-        const filteredRoles = response.data
-            .filter(role => 
-                role.id !== guildId && // @everyone rolünü filtrele
-                role.position < botHighestRole // Botun rolünden daha yüksek rolleri filtrele
-            )
-            .sort((a, b) => b.position - a.position); // Rolleri pozisyona göre sırala
+        console.log('Bot highest role position:', botHighestRole);
 
-        console.log('Toplam rol sayısı:', response.data.length);
-        console.log('Filtrelenmiş rol sayısı:', filteredRoles.length);
-        console.log('Bot en yüksek rol pozisyonu:', botHighestRole);
+        const filteredRoles = response.data.filter(role => 
+            role.id !== guildId && // @everyone rolünü filtrele
+            role.position < botHighestRole // Botun rolünden daha yüksek rolleri filtrele
+        );
+
+        console.log('Filtered roles:', filteredRoles);
 
         res.json(filteredRoles);
     } catch (error) {
-        console.error('\n❌ Rol Hatası:');
-        if (error.response) {
-            console.error('Discord API Hatası:', {
-                status: error.response.status,
-                data: error.response.data,
-                headers: error.response.headers
-            });
-            return res.status(error.response.status).json({
-                message: 'Discord API hatası',
-                discordError: error.response.data
-            });
-        }
-        console.error('Hata detayları:', {
+        console.error('Roles API Error:', {
             message: error.message,
-            stack: error.stack
+            response: error.response?.data,
+            status: error.response?.status,
+            headers: error.response?.headers,
+            config: {
+                url: error.config?.url,
+                method: error.config?.method,
+                headers: error.config?.headers
+            }
         });
         res.status(500).json({ 
-            message: 'Roller alınamadı', 
             error: error.message,
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            details: error.response?.data,
+            status: error.response?.status,
+            config: {
+                url: error.config?.url,
+                method: error.config?.method
+            }
         });
     }
 });
@@ -820,14 +797,14 @@ router.delete('/:guildId/polls/:pollId', auth, async (req, res) => {
         // Discord'dan mesajı sil
         const botToken = process.env.DISCORD_BOT_TOKEN;
         try {
-            await axios.delete(
-                `${DISCORD_API_URL}/channels/${poll.channelId}/messages/${poll.messageId}`,
-                {
-                    headers: {
-                        'Authorization': `Bot ${botToken}`
-                    }
+        await axios.delete(
+            `${DISCORD_API_URL}/channels/${poll.channelId}/messages/${poll.messageId}`,
+            {
+                headers: {
+                    'Authorization': `Bot ${botToken}`
                 }
-            );
+            }
+        );
         } catch (discordError) {
             console.error('Discord mesaj silme hatası:', discordError);
             // Discord mesajı silinemese bile devam et
@@ -848,191 +825,126 @@ router.delete('/:guildId/polls/:pollId', auth, async (req, res) => {
 // Reaction Roles endpoints
 router.get('/:guildId/reactionroles', auth, async (req, res) => {
     try {
-        const reactionRoles = await ReactionRole.find({ guildId: req.params.guildId, active: true });
+        const reactionRoles = await ReactionRole.find({ guildId: req.params.guildId });
         res.json(reactionRoles);
     } catch (error) {
-        console.error('ReactionRoles API Hatası:', error);
+        console.error('Get reaction roles error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-router.post('/:guildId/reactionroles', auth, async (req, res) => {
+router.post('/:guildId/reactionroles', async (req, res) => {
     try {
-        console.log('\n=== Tepki Rolü Oluşturuluyor ===');
+        const { guildId } = req.params;
         const { channelId, message, reactions } = req.body;
-        const guildId = req.params.guildId;
-        const botToken = process.env.DISCORD_BOT_TOKEN;
 
-        console.log('Gelen veriler:', { 
-            guildId,
-            channelId, 
-            message, 
-            reactions,
-            botToken: botToken ? 'Token mevcut' : 'Token eksik'
-        });
+        console.log('Creating reaction role:', { guildId, channelId, message, reactions });
 
-        // Validasyon
-        if (!channelId || !message || !reactions || !Array.isArray(reactions)) {
-            console.error('Validasyon hatası:', { channelId, message, reactions });
-            return res.status(400).json({ error: 'Geçersiz veri formatı' });
+        if (!channelId || !message || !reactions || reactions.length === 0) {
+            return res.status(400).json({ error: 'Eksik bilgi: Kanal, mesaj ve en az bir tepki gerekli' });
         }
 
-        if (reactions.length === 0) {
-            console.error('Tepki listesi boş');
-            return res.status(400).json({ error: 'En az bir tepki gerekli' });
-        }
-
-        if (reactions.some(r => !r.emoji || !r.roleId)) {
-            console.error('Eksik tepki verisi:', reactions);
-            return res.status(400).json({ error: 'Tüm tepkiler için emoji ve rol gerekli' });
-        }
-
-        if (!botToken) {
-            console.error('Bot token eksik');
-            return res.status(500).json({ error: 'Bot token bulunamadı' });
-        }
-
-        console.log('Discord mesajı gönderiliyor...');
-        // Discord'a mesaj gönder
-        const messageResponse = await axios.post(
-            `${DISCORD_API_URL}/channels/${channelId}/messages`,
-            {
-                content: message
-            },
-            {
-                headers: {
-                    'Authorization': `Bot ${botToken}`
+        // Mesajı gönder
+        let messageResponse;
+        try {
+            messageResponse = await axios.post(
+                `${DISCORD_API_URL}/channels/${channelId}/messages`,
+                {
+                    content: message,
+                    embeds: [{
+                        title: 'Tepki Rolleri',
+                        description: reactions.map(reaction => {
+                            // Emoji ID'si varsa (custom emoji) <:name:id> formatında, yoksa direkt emoji
+                            const emojiDisplay = reaction.emoji.includes(':') 
+                                ? `<${reaction.emoji.includes('a:') ? 'a' : ''}:${reaction.emoji.split(':')[1]}:${reaction.emoji.split(':')[2]}>`
+                                : reaction.emoji;
+                            return `${emojiDisplay} → ${reaction.roleName}`;
+                        }).join('\n'),
+                        color: 0x5865F2,
+                        footer: {
+                            text: 'Tepki vererek rol alabilirsiniz'
+                        }
+                    }]
+                },
+                {
+                    headers: {
+                        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
                 }
-            }
-        ).catch(error => {
-            console.error('Discord mesaj gönderme hatası:', {
-                status: error.response?.status,
-                data: error.response?.data,
-                message: error.message
-            });
-            throw new Error(`Discord mesajı gönderilemedi: ${error.response?.data?.message || error.message}`);
-        });
+            );
+            console.log('Message sent successfully:', messageResponse.data.id);
+        } catch (error) {
+            console.error('Error sending message:', error.response?.data || error.message);
+            return res.status(500).json({ error: 'Discord mesajı gönderilemedi' });
+        }
 
-        console.log('Mesaj gönderildi:', {
-            messageId: messageResponse.data.id,
-            content: messageResponse.data.content
-        });
-
-        console.log('Tepkiler ekleniyor...');
-        // Her tepki için rol ekle
+        // Tepkileri ekle
         for (const reaction of reactions) {
-            // Emoji formatını düzelt
-            let emoji = reaction.emoji;
-            console.log('İşlenen emoji:', { original: emoji });
-            
-            // Emoji formatını belirle ve doğrula
-            if (emoji.startsWith('<') && emoji.endsWith('>')) {
-                // Discord özel emoji formatı: <:name:id>
-                const match = emoji.match(/<:([^:]+):(\d+)>/);
-                if (match) {
-                    const [, name, id] = match;
-                    emoji = `${name}:${id}`;
-                    console.log('Discord özel emoji işlendi:', { name, id, final: emoji });
-                } else {
-                    throw new Error('Geçersiz özel emoji formatı');
-                }
-            } else if (emoji.startsWith(':') && emoji.endsWith(':')) {
-                // Discord standart emoji formatı: :emoji:
-                emoji = emoji.slice(1, -1);
-                // Emoji adını kontrol et
-                if (!/^[a-zA-Z0-9_]+$/.test(emoji)) {
-                    throw new Error('Geçersiz emoji adı');
-                }
-                console.log('Discord standart emoji işlendi:', emoji);
-            } else {
-                // Unicode emoji kontrolü
-                if (!/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}]/u.test(emoji)) {
-                    throw new Error('Geçersiz emoji formatı');
-                }
-                console.log('Unicode emoji işlendi:', emoji);
-            }
-
-            // URL encode
-            emoji = encodeURIComponent(emoji);
-
-            console.log('Tepki ekleniyor:', { 
-                emoji, 
-                roleId: reaction.roleId,
-                url: `${DISCORD_API_URL}/channels/${channelId}/messages/${messageResponse.data.id}/reactions/${emoji}/@me`
-            });
-
             try {
-                const reactionResponse = await axios.put(
+                const emoji = encodeURIComponent(reaction.emoji);
+                await axios.put(
                     `${DISCORD_API_URL}/channels/${channelId}/messages/${messageResponse.data.id}/reactions/${emoji}/@me`,
                     {},
                     {
                         headers: {
-                            'Authorization': `Bot ${botToken}`
+                            'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+                            'Content-Type': 'application/json'
                         }
                     }
                 );
-                console.log('Tepki başarıyla eklendi:', {
-                    emoji,
-                    status: reactionResponse.status,
-                    statusText: reactionResponse.statusText
-                });
+                console.log('Reaction added successfully:', reaction.emoji);
             } catch (error) {
-                console.error('Tepki ekleme hatası:', {
-                    emoji,
-                    error: error.response?.data || error.message,
-                    status: error.response?.status,
-                    headers: error.response?.headers,
-                    config: {
-                        url: error.config?.url,
-                        method: error.config?.method,
-                        headers: error.config?.headers
-                    }
-                });
-                throw new Error(`Tepki eklenemedi: ${error.response?.data?.message || error.message}`);
+                console.error('Error adding reaction:', error.response?.data || error.message);
+                // Tepki eklenemese bile devam et
+                continue;
             }
         }
 
-        console.log('Veritabanına kaydediliyor...');
         // Veritabanına kaydet
-        const reactionRole = new ReactionRole({
-            guildId,
-            channelId,
-            messageId: messageResponse.data.id,
-            message,
-            reactions
-        });
+        try {
+            const reactionRole = new ReactionRole({
+                guildId,
+                channelId,
+                messageId: messageResponse.data.id,
+                message,
+                reactions: reactions.map(reaction => ({
+                    emoji: reaction.emoji,
+                    roleId: reaction.roleId
+                }))
+            });
 
-        await reactionRole.save();
-        console.log('Tepki rolü başarıyla oluşturuldu:', {
-            id: reactionRole._id,
-            messageId: reactionRole.messageId,
-            reactionCount: reactionRole.reactions.length,
-            reactions: reactionRole.reactions
-        });
-
-        res.json(reactionRole);
+            await reactionRole.save();
+            console.log('Reaction role saved to database:', reactionRole._id);
+            res.status(201).json(reactionRole);
+        } catch (error) {
+            console.error('Error saving to database:', error);
+            // Mesajı ve tepkileri sil
+            try {
+                await axios.delete(
+                    `${DISCORD_API_URL}/channels/${channelId}/messages/${messageResponse.data.id}`,
+                    {
+                        headers: {
+                            'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`
+                        }
+                    }
+                );
+            } catch (deleteError) {
+                console.error('Error deleting message after database error:', deleteError);
+            }
+            res.status(500).json({ error: 'Tepki rolü veritabanına kaydedilemedi' });
+        }
     } catch (error) {
-        console.error('\n❌ Tepki Rolü Oluşturma Hatası:');
-        console.error('Hata detayları:', {
-            message: error.message,
-            stack: error.stack,
-            response: error.response?.data,
-            status: error.response?.status
-        });
-        
-        res.status(500).json({ 
-            error: 'Tepki rolü oluşturulurken bir hata oluştu',
-            details: error.message,
-            discordError: error.response?.data
-        });
+        console.error('Unexpected error in reaction role creation:', error);
+        res.status(500).json({ error: 'Tepki rolü oluşturulurken beklenmeyen bir hata oluştu' });
     }
 });
 
-router.delete('/:guildId/reactionroles/:reactionRoleId', auth, async (req, res) => {
+router.delete('/:guildId/reactionroles/:id', auth, async (req, res) => {
     try {
-        const reactionRole = await ReactionRole.findOne({ _id: req.params.reactionRoleId, guildId: req.params.guildId });
+        const reactionRole = await ReactionRole.findById(req.params.id);
         if (!reactionRole) {
-            return res.status(404).json({ error: 'Tepki rolü bulunamadı' });
+            return res.status(404).json({ message: 'Reaction role not found' });
         }
 
         // Discord'dan mesajı sil
@@ -1048,96 +960,217 @@ router.delete('/:guildId/reactionroles/:reactionRoleId', auth, async (req, res) 
 
         // Veritabanından sil
         await reactionRole.deleteOne();
-        res.json({ message: 'Tepki rolü başarıyla silindi' });
+        res.json({ message: 'Reaction role deleted successfully' });
     } catch (error) {
-        console.error('ReactionRole Silme Hatası:', error);
+        console.error('Delete reaction role error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Discord'un varsayılan emojilerini ve sunucudaki özel emojileri getir
-router.get('/:guildId/emojis', auth, async (req, res) => {
+// Sunucu emojilerini getir
+router.get('/:guildId/emojis', async (req, res) => {
     try {
-        console.log('\n=== Emojiler Getiriliyor ===');
-        const guildId = req.params.guildId;
+        const { guildId } = req.params;
         const botToken = process.env.DISCORD_BOT_TOKEN;
 
-        if (!guildId) {
-            return res.status(400).json({ error: 'Guild ID gerekli' });
-        }
-
-        if (!botToken) {
-            console.error('Bot token bulunamadı');
-            return res.status(500).json({ error: 'Bot token yapılandırması eksik' });
-        }
-
-        // Önce sunucu bilgilerini kontrol et
-        const server = await Server.findOne({ guildId });
-        if (!server) {
-            console.error('Sunucu bulunamadı:', guildId);
-            return res.status(404).json({ error: 'Sunucu bulunamadı' });
-        }
-
-        // Sunucudaki özel emojileri getir
-        const guildEmojis = await axios.get(
+        const response = await axios.get(
             `${DISCORD_API_URL}/guilds/${guildId}/emojis`,
             {
                 headers: {
                     'Authorization': `Bot ${botToken}`
                 }
             }
-        ).catch(error => {
-            console.error('Sunucu emojileri getirme hatası:', {
-                status: error.response?.status,
-                data: error.response?.data,
-                message: error.message
-            });
-            return { data: [] };
-        });
+        );
 
-        // Varsayılan emojiler
-        const defaultEmojis = [
-            '👍', '👎', '❤️', '😊', '🎉', '🔥', '⭐', '✅', '❌', '🔄',
-            '📌', '🔔', '🔕', '📢', '💬', '📝', '🔍', '🔒', '🔓', '⚡',
-            '🎮', '🎲', '🎯', '🎨', '🎭', '🎪', '🎫', '🎟️', '🎗️', '🎖️',
-            '🏆', '🏅', '🎖️', '🎗️', '🎟️', '🎫', '🎪', '🎭', '🎨', '🎯',
-            '🎲', '🎮', '🎸', '🎹', '🎺', '🎷', '🎻', '🎼', '🎧', '🎤',
-            '🎵', '🎶', '🎼', '🎻', '🎷', '🎺', '🎹', '🎸', '🎯', '🎲',
-            '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
-            '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
-            '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩',
-            '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
-            '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬',
-            '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗',
-            '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯',
-            '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
-            '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '💩'
-        ];
+        // Emojileri kategorilere ayır
+        const emojis = {
+            custom: response.data.map(emoji => ({
+                id: emoji.id,
+                name: emoji.name,
+                url: `https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? 'gif' : 'png'}`,
+                animated: emoji.animated
+            })),
+            default: [
+                { name: '😀', url: '😀' },
+                { name: '😃', url: '😃' },
+                { name: '😄', url: '😄' },
+                { name: '😁', url: '😁' },
+                { name: '😆', url: '😆' },
+                { name: '😅', url: '😅' },
+                { name: '😂', url: '😂' },
+                { name: '🤣', url: '🤣' },
+                { name: '😊', url: '😊' },
+                { name: '😇', url: '😇' },
+                { name: '🙂', url: '🙂' },
+                { name: '🙃', url: '🙃' },
+                { name: '😉', url: '😉' },
+                { name: '😌', url: '😌' },
+                { name: '😍', url: '😍' },
+                { name: '🥰', url: '🥰' },
+                { name: '😘', url: '😘' },
+                { name: '😗', url: '😗' },
+                { name: '😙', url: '😙' },
+                { name: '😚', url: '😚' },
+                { name: '😋', url: '😋' },
+                { name: '😛', url: '😛' },
+                { name: '😝', url: '😝' },
+                { name: '😜', url: '😜' },
+                { name: '🤪', url: '🤪' },
+                { name: '🤨', url: '🤨' },
+                { name: '🧐', url: '🧐' },
+                { name: '🤓', url: '🤓' },
+                { name: '😎', url: '😎' },
+                { name: '🤩', url: '🤩' },
+                { name: '🥳', url: '🥳' },
+                { name: '😏', url: '😏' },
+                { name: '😒', url: '😒' },
+                { name: '😞', url: '😞' },
+                { name: '😔', url: '😔' },
+                { name: '😟', url: '😟' },
+                { name: '😕', url: '😕' },
+                { name: '🙁', url: '🙁' },
+                { name: '☹️', url: '☹️' },
+                { name: '😣', url: '😣' },
+                { name: '😖', url: '😖' },
+                { name: '😫', url: '😫' },
+                { name: '😩', url: '😩' },
+                { name: '🥺', url: '🥺' },
+                { name: '😢', url: '😢' },
+                { name: '😭', url: '😭' },
+                { name: '😤', url: '😤' },
+                { name: '😠', url: '😠' },
+                { name: '😡', url: '😡' },
+                { name: '🤬', url: '🤬' },
+                { name: '🤯', url: '🤯' },
+                { name: '😳', url: '😳' },
+                { name: '🥵', url: '🥵' },
+                { name: '🥶', url: '🥶' },
+                { name: '😱', url: '😱' },
+                { name: '😨', url: '😨' },
+                { name: '😰', url: '😰' },
+                { name: '😥', url: '😥' },
+                { name: '😓', url: '😓' },
+                { name: '🤗', url: '🤗' },
+                { name: '🤔', url: '🤔' },
+                { name: '🤭', url: '🤭' },
+                { name: '🤫', url: '🤫' },
+                { name: '🤥', url: '🤥' },
+                { name: '😶', url: '😶' },
+                { name: '😐', url: '😐' },
+                { name: '😑', url: '😑' },
+                { name: '😬', url: '😬' },
+                { name: '🙄', url: '🙄' },
+                { name: '😯', url: '😯' },
+                { name: '😦', url: '😦' },
+                { name: '😧', url: '😧' },
+                { name: '😮', url: '😮' },
+                { name: '😲', url: '😲' },
+                { name: '🥱', url: '🥱' },
+                { name: '😴', url: '😴' },
+                { name: '🤤', url: '🤤' },
+                { name: '😪', url: '😪' },
+                { name: '😵', url: '😵' },
+                { name: '🤐', url: '🤐' },
+                { name: '🥴', url: '🥴' },
+                { name: '🤢', url: '🤢' },
+                { name: '🤮', url: '🤮' },
+                { name: '🤧', url: '🤧' },
+                { name: '😷', url: '😷' },
+                { name: '🤒', url: '🤒' },
+                { name: '🤕', url: '🤕' },
+                { name: '🤑', url: '🤑' },
+                { name: '🤠', url: '🤠' },
+                { name: '💩', url: '💩' },
+                { name: '👻', url: '👻' },
+                { name: '👽', url: '👽' },
+                { name: '🤖', url: '🤖' },
+                { name: '😺', url: '😺' },
+                { name: '😸', url: '😸' },
+                { name: '😹', url: '😹' },
+                { name: '😻', url: '😻' },
+                { name: '😼', url: '😼' },
+                { name: '😽', url: '😽' },
+                { name: '🙀', url: '🙀' },
+                { name: '😿', url: '😿' },
+                { name: '😾', url: '😾' },
+                { name: '🙈', url: '🙈' },
+                { name: '🙉', url: '🙉' },
+                { name: '🙊', url: '🙊' },
+                { name: '💌', url: '💌' },
+                { name: '💘', url: '💘' },
+                { name: '💝', url: '💝' },
+                { name: '💖', url: '💖' },
+                { name: '💗', url: '💗' },
+                { name: '💓', url: '💓' },
+                { name: '💞', url: '💞' },
+                { name: '💕', url: '💕' },
+                { name: '💟', url: '💟' },
+                { name: '❣️', url: '❣️' },
+                { name: '💔', url: '💔' },
+                { name: '❤️', url: '❤️' },
+                { name: '🧡', url: '🧡' },
+                { name: '💛', url: '💛' },
+                { name: '💚', url: '💚' },
+                { name: '💙', url: '💙' },
+                { name: '💜', url: '💜' },
+                { name: '🤎', url: '🤎' },
+                { name: '🖤', url: '🖤' },
+                { name: '🤍', url: '🤍' },
+                { name: '💯', url: '💯' },
+                { name: '💢', url: '💢' },
+                { name: '💥', url: '💥' },
+                { name: '💫', url: '💫' },
+                { name: '💦', url: '💦' },
+                { name: '💨', url: '💨' },
+                { name: '🕳️', url: '🕳️' },
+                { name: '💣', url: '💣' },
+                { name: '💬', url: '💬' },
+                { name: '👁️‍🗨️', url: '👁️‍🗨️' },
+                { name: '🗨️', url: '🗨️' },
+                { name: '🗯️', url: '🗯️' },
+                { name: '💭', url: '💭' },
+                { name: '💤', url: '💤' }
+            ]
+        };
 
-        // Özel emojileri formatla
-        const customEmojis = guildEmojis.data.map(emoji => ({
-            name: emoji.name,
-            id: emoji.id,
-            animated: emoji.animated,
-            url: `https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? 'gif' : 'png'}`
-        }));
-
-        console.log('Emojiler hazırlandı:', {
-            defaultCount: defaultEmojis.length,
-            customCount: customEmojis.length
-        });
-
-        res.json({
-            defaultEmojis,
-            customEmojis
-        });
+        res.json(emojis);
     } catch (error) {
-        console.error('Emoji getirme hatası:', error);
-        res.status(500).json({ 
-            error: 'Emojiler getirilirken bir hata oluştu',
-            details: error.message
-        });
+        console.error('Error fetching emojis:', error);
+        res.status(500).json({ error: 'Emojiler yüklenirken bir hata oluştu' });
     }
+});
+
+// Moderatör Rolleri GET
+router.get('/:guildId/moderator-roles', auth, async (req, res) => {
+  try {
+    const server = await Server.findOne({ guildId: req.params.guildId });
+    if (!server) {
+      return res.status(404).json({ message: 'Server not found' });
+    }
+    const roles = server.settings.moderatorRoles || [];
+    res.json({ roles });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching moderator roles', error: error.message });
+  }
+});
+
+// Moderatör Rolleri PUT
+router.put('/:guildId/moderator-roles', auth, async (req, res) => {
+  try {
+    const { roles } = req.body;
+    if (!Array.isArray(roles)) {
+      return res.status(400).json({ message: 'Roles must be an array' });
+    }
+    const server = await Server.findOne({ guildId: req.params.guildId });
+    if (!server) {
+      return res.status(404).json({ message: 'Server not found' });
+    }
+    server.settings.moderatorRoles = roles;
+    await server.save();
+    res.json({ roles });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating moderator roles', error: error.message });
+  }
 });
 
 module.exports = router; 

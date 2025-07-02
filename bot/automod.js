@@ -1,94 +1,167 @@
 const Server = require('./models/Server');
 
-// Küfür/argo kelimeler (örnek, panelden de çekilebilir)
-const defaultBadwords = ['küfür1', 'küfür2', 'örnek'];
+// Varsayılan yasaklı kelimeler
+const defaultBadwords = ['kelime1', 'kelime2', 'örnek'];
 
 // Spam ve flood kontrolü için Map'ler
 const userMessages = new Map(); // Son mesajları tutmak için
 const userMessageTimes = new Map(); // Mesaj zamanlarını tutmak için
 const warningCooldowns = new Map(); // Uyarı mesajları için cooldown
+const userWarnings = new Map(); // Kullanıcı uyarılarını tutmak için
+
+const defaultSettings = {
+  enableBadwordsFilter: true,
+  enableSpamFilter: true,
+  enableFloodFilter: true,
+  enableCapsFilter: true,
+  enableLinkFilter: true,
+  badwordsList: ['küfür1', 'küfür2'],
+  badwordsIgnoredChannels: [],
+  badwordsIgnoredRoles: [],
+  spamIgnoredChannels: [],
+  spamIgnoredRoles: [],
+  floodIgnoredChannels: [],
+  floodIgnoredRoles: [],
+  capsIgnoredChannels: [],
+  capsIgnoredRoles: [],
+  linkIgnoredChannels: [],
+  linkIgnoredRoles: [],
+  spamPunishment: 'delete',
+  floodPunishment: 'delete',
+  capsPunishment: 'delete',
+  linkPunishment: 'delete',
+  spamThreshold: 5,
+  floodThreshold: 5,
+  capsThreshold: 70,
+  spamTimeWindow: 5000,
+  floodTimeWindow: 5000,
+  warningSystem: {
+    enabled: true,
+    punishments: [
+      { warnings: 3, punishment: 'timeout', duration: 3600000 }, // 3 uyarıda 1 saat timeout
+      { warnings: 5, punishment: 'kick' }, // 5 uyarıda kick
+      { warnings: 7, punishment: 'ban' } // 7 uyarıda ban
+    ],
+    warningExpiry: 86400000 // 24 saat
+  }
+};
 
 async function applyPunishment(message, punishment, reason) {
-    try {
-        // Önce mesajı sil
-        await message.delete().catch(console.error);
-        console.log('Mesaj silindi:', message.content);
+  const member = message.member;
+  if (!member) return;
 
-        // Ceza türüne göre işlem yap
-        switch (punishment) {
-            case 'delete':
-                // Sadece mesaj silindi, başka işlem yok
-                break;
-
-            case 'delete_warn':
-                // Cooldown kontrolü
-                const cooldownKey = `${message.guild.id}-${message.channel.id}`;
-                const lastWarning = warningCooldowns.get(cooldownKey) || 0;
-                const now = Date.now();
-
-                // Eğer son uyarıdan bu yana 10 saniye geçmediyse uyarı verme
-                if (now - lastWarning < 10000) {
-                    return;
-                }
-
-                // Mesaj silindi ve uyarı verildi
-                await message.channel.send({
-                    content: `${message.author} ${reason}`
-                }).then(msg => {
-                    setTimeout(() => msg.delete().catch(console.error), 5000);
-                });
-
-                // Cooldown'u güncelle
-                warningCooldowns.set(cooldownKey, now);
-                break;
-
-            case 'timeout':
-                // Timeout uygula (5 dakika)
-                await message.member.timeout(5 * 60 * 1000, reason);
-                await message.channel.send({
-                    content: `${message.author} ${reason} - 5 dakika timeout uygulandı.`
-                }).then(msg => {
-                    setTimeout(() => msg.delete().catch(console.error), 5000);
-                });
-                break;
-
-            case 'kick':
-                // Kullanıcıyı sunucudan at
-                await message.member.kick(reason);
-                await message.channel.send({
-                    content: `${message.author.tag} ${reason} - Sunucudan atıldı.`
-                }).then(msg => {
-                    setTimeout(() => msg.delete().catch(console.error), 5000);
-                });
-                break;
-
-            case 'ban':
-                // Kullanıcıyı sunucudan yasakla
-                await message.member.ban({ reason });
-                await message.channel.send({
-                    content: `${message.author.tag} ${reason} - Sunucudan yasaklandı.`
-                }).then(msg => {
-                    setTimeout(() => msg.delete().catch(console.error), 5000);
-                });
-                break;
-        }
-    } catch (error) {
-        console.error('Ceza uygulanırken hata:', error);
+  try {
+    switch (punishment) {
+      case 'delete':
+        await message.delete();
+        break;
+      case 'timeout':
+        const timeoutDuration = defaultSettings.warningSystem.punishments
+          .find(p => p.punishment === 'timeout')?.duration || 3600000;
+        await member.timeout(timeoutDuration, reason);
+        break;
+      case 'kick':
+        await member.kick(reason);
+        break;
+      case 'ban':
+        await member.ban({ reason });
+        break;
     }
+  } catch (error) {
+    console.error('Ceza uygulanırken hata:', error);
+  }
 }
 
-function isIgnored(message, ignoredChannels = [], ignoredRoles = []) {
-    if (ignoredChannels.includes(message.channel.id)) return true;
-    if (message.member && message.member.roles.cache.some(role => ignoredRoles.includes(role.id))) return true;
-    return false;
+async function handleWarning(message, reason) {
+  if (!defaultSettings.warningSystem.enabled) return;
+
+  const userId = message.author.id;
+  const now = Date.now();
+
+  // Kullanıcının uyarılarını al veya oluştur
+  if (!userWarnings.has(userId)) {
+    userWarnings.set(userId, []);
+  }
+
+  const warnings = userWarnings.get(userId);
+
+  // Süresi dolmuş uyarıları temizle
+  const validWarnings = warnings.filter(warning => 
+    now - warning.timestamp < defaultSettings.warningSystem.warningExpiry
+  );
+  userWarnings.set(userId, validWarnings);
+
+  // Yeni uyarı ekle
+  validWarnings.push({
+    reason,
+    timestamp: now
+  });
+
+  // Uyarı sayısını kontrol et ve uygun cezayı bul
+  const currentWarnings = validWarnings.length;
+  const punishment = defaultSettings.warningSystem.punishments
+    .sort((a, b) => b.warnings - a.warnings) // En yüksek uyarı sayısından başla
+    .find(p => currentWarnings >= p.warnings);
+
+  if (punishment) {
+    // Ceza uygula
+    const punishmentType = {
+      timeout: 'geçici olarak susturuldu',
+      kick: 'sunucudan atıldı',
+      ban: 'sunucudan yasaklandı'
+    }[punishment.punishment];
+
+    const durationText = punishment.punishment === 'timeout' 
+      ? ` (${punishment.duration / 3600000} saat)` 
+      : '';
+
+    await applyPunishment(
+      message, 
+      punishment.punishment, 
+      `${punishment.warnings} uyarı limitine ulaşıldı. Son uyarı: ${reason}`
+    );
+
+    // Uyarıları sıfırla
+    userWarnings.set(userId, []);
+
+    // Kullanıcıya bilgi ver
+    try {
+      await message.channel.send(
+        `${message.author} ${punishment.warnings} uyarı aldığı için ${punishmentType}${durationText}.`
+      );
+    } catch (error) {
+      console.error('Uyarı mesajı gönderilirken hata:', error);
+    }
+  } else {
+    // Uyarı mesajı gönder
+    try {
+      const nextPunishment = defaultSettings.warningSystem.punishments
+        .sort((a, b) => a.warnings - b.warnings) // En düşük uyarı sayısından başla
+        .find(p => currentWarnings < p.warnings);
+
+      const nextWarningText = nextPunishment 
+        ? `\nSonraki ceza: ${nextPunishment.warnings} uyarıda ${
+            nextPunishment.punishment === 'timeout' 
+              ? `${nextPunishment.duration / 3600000} saat timeout` 
+              : nextPunishment.punishment
+          }`
+        : '';
+
+      await message.channel.send(
+        `${message.author} uyarıldı (${currentWarnings} uyarı). Sebep: ${reason}${nextWarningText}`
+      );
+    } catch (error) {
+      console.error('Uyarı mesajı gönderilirken hata:', error);
+    }
+  }
 }
 
-async function checkAutomod(message) {
+async function checkAutomod(message, settings) {
     if (message.author.bot || !message.guild) return;
 
     // Sunucu ayarlarını çek
     const serverData = await Server.findOne({ guildId: message.guild.id }).lean();
-    const settings = serverData?.settings || {};
+    const serverSettings = serverData?.settings || defaultSettings;
 
     const {
         enableBadwordsFilter,
@@ -96,7 +169,6 @@ async function checkAutomod(message) {
         enableLinkFilter,
         enableCapsFilter,
         enableFloodFilter,
-        blacklistWords = [],
         badwordsPunishment = 'delete_warn',
         spamPunishment = 'delete_warn',
         linkPunishment = 'delete_warn',
@@ -107,21 +179,20 @@ async function checkAutomod(message) {
         linkIgnoredRoles = [],
         badwordsIgnoredChannels = [],
         badwordsIgnoredRoles = [],
-        blacklistIgnoredChannels = [],
-        blacklistIgnoredRoles = [],
         capsIgnoredChannels = [],
         capsIgnoredRoles = [],
         floodIgnoredChannels = [],
         floodIgnoredRoles = [],
         spamIgnoredChannels = [],
         spamIgnoredRoles = [],
-    } = settings;
+    } = serverSettings;
 
     console.log('--- Automod Debug ---');
     console.log('enableBadwordsFilter:', enableBadwordsFilter);
     console.log('enableSpamFilter:', enableSpamFilter);
     console.log('enableFloodFilter:', enableFloodFilter);
     console.log('enableCapsFilter:', enableCapsFilter);
+    console.log('enableLinkFilter:', enableLinkFilter);
     console.log('badwordsList:', badwordsList);
     console.log('badwordsIgnoredChannels:', badwordsIgnoredChannels);
     console.log('badwordsIgnoredRoles:', badwordsIgnoredRoles);
@@ -129,17 +200,35 @@ async function checkAutomod(message) {
     console.log('Mesaj kanalı:', message.channel.id);
     console.log('Mesaj rolleri:', message.member ? message.member.roles.cache.map(r => r.id) : []);
 
-    // 1. Küfür/Argo Filtresi
+    // 1. Yasaklı Kelime Filtresi
     if (enableBadwordsFilter && !isIgnored(message, badwordsIgnoredChannels, badwordsIgnoredRoles)) {
         const matched = badwordsList.find(word => message.content.toLowerCase().includes(word));
-        console.log('Küfür filtresi aktif, matched:', matched);
+        console.log('Yasaklı kelime filtresi aktif, matched:', matched);
         if (matched) {
-            console.log('Küfür filtresi tetiklendi, silme fonksiyonu çağrılıyor!');
-            return applyPunishment(message, badwordsPunishment, 'küfür/argo kullanmak yasak!');
+            console.log('Yasaklı kelime filtresi tetiklendi, silme fonksiyonu çağrılıyor!');
+            await message.delete();
+            await handleWarning(message, 'Küfür kullanımı');
+            console.log('Mesaj silindi:', message.content);
+            return;
         }
     }
 
-    // 2. Spam Filtresi
+    // 2. Link Filtresi
+    if (enableLinkFilter && !isIgnored(message, linkIgnoredChannels, linkIgnoredRoles)) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const hasLink = urlRegex.test(message.content);
+
+        if (hasLink) {
+            console.log('Link filtresi aktif, matched:', message.content);
+            console.log('Link filtresi tetiklendi, silme fonksiyonu çağrılıyor!');
+            await message.delete();
+            await handleWarning(message, 'Link paylaşımı');
+            console.log('Mesaj silindi:', message.content);
+            return;
+        }
+    }
+
+    // 3. Spam Filtresi
     if (enableSpamFilter && !isIgnored(message, spamIgnoredChannels, spamIgnoredRoles)) {
         const userId = message.author.id;
         const userLastMessages = userMessages.get(userId) || [];
@@ -171,7 +260,8 @@ async function checkAutomod(message) {
                     console.error('Spam mesajları silinirken hata:', error);
                 }
 
-                return applyPunishment(message, spamPunishment, 'spam yapmak yasak!');
+                await handleWarning(message, 'Spam yapma');
+                return;
             }
         }
 
@@ -190,30 +280,49 @@ async function checkAutomod(message) {
         userMessages.set(userId, userLastMessages);
     }
 
-    // 3. Flood Filtresi
+    // 4. Flood Filtresi
     if (enableFloodFilter && !isIgnored(message, floodIgnoredChannels, floodIgnoredRoles)) {
         const userId = message.author.id;
         const now = Date.now();
-        const userTimes = userMessageTimes.get(userId) || [];
         
-        // Son 10 saniye içindeki mesajları kontrol et
-        const recentMessages = userTimes.filter(time => now - time < 10000);
-        
-        if (recentMessages.length >= 5) { // 10 saniye içinde 5 mesaj
-            console.log('Flood filtresi tetiklendi!');
-            return applyPunishment(message, floodPunishment, 'flood yapmak yasak!');
+        if (!userMessageTimes.has(userId)) {
+            userMessageTimes.set(userId, []);
         }
-
-        // Yeni mesaj zamanını ekle
-        recentMessages.push(now);
-        userMessageTimes.set(userId, recentMessages);
-
-        // Eski mesajları temizle (10 saniyeden eski)
-        const cleanedTimes = recentMessages.filter(time => now - time < 10000);
-        userMessageTimes.set(userId, cleanedTimes);
+        
+        const userTimes = userMessageTimes.get(userId);
+        userTimes.push(now);
+        
+        // Belirli bir süre öncesindeki mesajları temizle
+        const cutoffTime = now - serverSettings.floodTimeWindow;
+        while (userTimes.length > 0 && userTimes[0] < cutoffTime) {
+            userTimes.shift();
+        }
+        
+        if (userTimes.length >= serverSettings.floodThreshold) {
+            console.log('Flood filtresi aktif, kullanıcı flood yapıyor!');
+            console.log('Flood filtresi tetiklendi, silme fonksiyonu çağrılıyor!');
+            
+            // Kullanıcının son mesajlarını topla
+            const messages = await message.channel.messages.fetch({ limit: serverSettings.floodThreshold });
+            const userMessages = messages.filter(m => 
+                m.author.id === userId && 
+                now - m.createdTimestamp <= serverSettings.floodTimeWindow
+            );
+            
+            // Tüm flood mesajlarını tek seferde sil
+            if (userMessages.size > 0) {
+                await message.channel.bulkDelete(userMessages);
+                console.log(`${userMessages.size} adet flood mesajı silindi`);
+            }
+            
+            // Kullanıcının mesaj zamanlarını sıfırla
+            userMessageTimes.set(userId, []);
+            await handleWarning(message, 'Flood yapma');
+            return;
+        }
     }
 
-    // 4. Caps Filtresi
+    // 5. Caps Filtresi
     if (enableCapsFilter && !isIgnored(message, capsIgnoredChannels, capsIgnoredRoles)) {
         // Mesaj 5 karakterden uzunsa ve sadece harflerden oluşuyorsa kontrol et
         if (message.content.length > 5 && /^[a-zA-Z\s]+$/.test(message.content)) {
@@ -229,12 +338,27 @@ async function checkAutomod(message) {
             // Eğer büyük harf oranı %70'ten fazlaysa
             if (capsPercentage > 70) {
                 console.log('Caps filtresi tetiklendi!');
-                return applyPunishment(message, capsPunishment, 'çok fazla büyük harf kullanmak yasak!');
+                await handleWarning(message, 'Aşırı büyük harf kullanımı');
+                return;
             }
         }
     }
+}
 
-    // ... diğer filtreler ...
+// Yardımcı fonksiyonlar
+function isIgnored(message, ignoredChannels, ignoredRoles) {
+    // Kanal kontrolü
+    if (ignoredChannels.includes(message.channel.id)) {
+        return true;
+    }
+
+    // Rol kontrolü
+    if (message.member) {
+        const memberRoles = message.member.roles.cache.map(role => role.id);
+        return memberRoles.some(roleId => ignoredRoles.includes(roleId));
+    }
+
+    return false;
 }
 
 module.exports = { checkAutomod }; 
